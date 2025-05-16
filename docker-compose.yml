@@ -1,0 +1,44 @@
+version: '3.9'
+
+services:
+
+  db:
+    image: postgres:16
+    container_name: casino-db
+    environment:
+      POSTGRES_USER: casino
+      POSTGRES_PASSWORD: casino123
+      POSTGRES_DB: casino_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: casino-backend
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./backend:/app
+    env_file:
+      - .env
+    depends_on:
+      - db
+
+  frontend:
+    build: ./frontend
+    container_name: casino-frontend
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    command: ["npm", "run", "dev"]
+    depends_on:
+      - backend
+
+volumes:
+  pgdata:
