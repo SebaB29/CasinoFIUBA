@@ -40,6 +40,29 @@ func CrearUsuario(c *gin.Context) {
 	c.JSON(http.StatusCreated, usuario)
 }
 
+func LoginUsuario(c *gin.Context) {
+	var input dto.LoginDTO
+
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "JSON inválido o campos faltantes"})
+		return
+	}
+
+	usuario, err := services.NewUsuarioService().Login(input)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Devuelve datos del usuario sin contraseña
+	c.JSON(http.StatusOK, gin.H{
+		"id":      usuario.ID,
+		"nombre":  usuario.Nombre,
+		"email":   usuario.Email,
+		"mensaje": "Inicio de sesión exitoso",
+	})
+}
+
 // Devuelve la lista de todos los usuarios (un get all users)
 func ObtenerUsuarios(c *gin.Context) {
 	usuarios, err := usuarioRepo.ObtenerTodos()

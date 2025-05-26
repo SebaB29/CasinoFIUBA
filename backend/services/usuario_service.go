@@ -14,7 +14,7 @@ type UsuarioService struct {
 }
 
 func NewUsuarioService() *UsuarioService {
-	repo := repositories.NewUsuarioRepository(db.DB) // usar db.DB global exportado
+	repo := repositories.NewUsuarioRepository(db.DB)
 	return &UsuarioService{repo: repo}
 }
 
@@ -42,4 +42,17 @@ func (s *UsuarioService) CrearUsuario(input dto.CrearUsuarioDTO) (*models.Usuari
 	}
 
 	return &usuario, nil
+}
+
+func (s *UsuarioService) Login(input dto.LoginDTO) (*models.Usuario, error) {
+	usuario, err := s.repo.ObtenerPorEmail(input.Email)
+	if err != nil || usuario == nil {
+		return nil, errores.ErrUsuarioNoEncontrado
+	}
+
+	if usuario.Password != input.Password {
+		return nil, errores.ErrPasswordIncorrecta
+	}
+
+	return usuario, nil
 }
