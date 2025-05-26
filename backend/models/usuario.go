@@ -6,6 +6,6 @@ type Usuario struct {
 	Nombre   string `json:"nombre"`
 	Apellido string `json:"apellido"`
 	Edad     uint   `json:"edad"`
-	Email    string `json:"email" gorm:"unique"`
+	Email    string `json:"email"`
 	Password string `json:"password"`
 }

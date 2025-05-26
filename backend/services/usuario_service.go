@@ -3,6 +3,7 @@ package services
 import (
 	"casino/db"
 	"casino/dto"
+	"casino/errores"
 	"casino/models"
 	"casino/repositories"
 	"errors"
@@ -18,6 +19,16 @@ func NewUsuarioService() *UsuarioService {
 }
 
 func (s *UsuarioService) CrearUsuario(input dto.CrearUsuarioDTO) (*models.Usuario, error) {
+	// Validación: edad mínima
+	if input.Edad < 18 {
+		return nil, errores.ErrMenorDeEdad
+	}
+
+	existe, _ := s.repo.ObtenerPorEmail(input.Email)
+	if existe != nil {
+		return nil, errores.ErrEmailYaExiste
+	}
+
 	usuario := models.Usuario{
 		Nombre:   input.Nombre,
 		Apellido: input.Apellido,

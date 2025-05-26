@@ -4,6 +4,7 @@ package controllers
 import (
 	"casino/db"
 	"casino/dto"
+	"casino/errores"
 	"casino/repositories"
 	"casino/services"
 
@@ -14,7 +15,7 @@ import (
 
 var usuarioRepo = repositories.NewUsuarioRepository(db.DB)
 
-// var usuarioService = services.NewUsuarioService()
+// var usuarioService = services.NewUsuarioService() DESPUES HAY QUE REVISAR Y CORREGIRLO POR #1
 
 func CrearUsuario(c *gin.Context) {
 	var input dto.CrearUsuarioDTO
@@ -24,9 +25,15 @@ func CrearUsuario(c *gin.Context) {
 		return
 	}
 
+	// #1: ESTO NO ES LO IDEAL PORQUE SE CREA UNA INSTANCIA DEL SERVICE CADA VEZ QUE SE USA, HABRIA QUE HACER UN SETUP
 	usuario, err := services.NewUsuarioService().CrearUsuario(input)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		switch err {
+		case errores.ErrMenorDeEdad, errores.ErrEmailYaExiste:
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		default:
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Ocurrió un error al crear el usuario"})
+		}
 		return
 	}
 

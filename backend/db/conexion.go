@@ -37,6 +37,9 @@ func ConectarDB() {
 	DB = db
 	log.Println("Base de datos conectada correctamente")
 
+	// Elimina la tabla para poder testear bien las cosas. LUEGO SACAR
+	db.Migrator().DropTable(&models.Usuario{})
+
 	// Migrar modelo Usuario (crea tabla si no existe)
 	if err := DB.AutoMigrate(&models.Usuario{}); err != nil {
 		log.Fatalf("Error al migrar la base de datos: %v", err)
