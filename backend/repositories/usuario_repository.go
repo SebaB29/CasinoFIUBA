@@ -11,20 +11,20 @@ type UsuarioRepository struct {
 }
 
 func NewUsuarioRepository(db *gorm.DB) *UsuarioRepository {
-	return &UsuarioRepository{db: db} // asignar correctamente
+	return &UsuarioRepository{db: db}
 }
 
-func (r *UsuarioRepository) Crear(usuario *models.Usuario) error {
-	return r.db.Create(usuario).Error
+func (repository *UsuarioRepository) Crear(usuario *models.Usuario) error {
+	return repository.db.Create(usuario).Error
 }
 
-func (r *UsuarioRepository) ObtenerPorEmail(email string) (*models.Usuario, error) {
-	var u models.Usuario
-	err := r.db.Where("email = ?", email).First(&u).Error
+func (repository *UsuarioRepository) ObtenerPorEmail(email string) (*models.Usuario, error) {
+	var usuario models.Usuario
+	err := repository.db.Where("email = ?", email).First(&usuario).Error
 	if err == gorm.ErrRecordNotFound {
 		return nil, nil // no existe
 	}
-	return &u, err // devuelve usuario o error real
+	return &usuario, err
 }
 
 // Busca un usuario por su ID

@@ -6,25 +6,25 @@ import (
 	"casino/errores"
 	"casino/models"
 	"casino/repositories"
-	"errors"
 )
 
+const EdadMinimaPermitida = 18
+
 type UsuarioService struct {
-	repo *repositories.UsuarioRepository
+	repository *repositories.UsuarioRepository
 }
 
 func NewUsuarioService() *UsuarioService {
-	repo := repositories.NewUsuarioRepository(db.DB)
-	return &UsuarioService{repo: repo}
+	repository := repositories.NewUsuarioRepository(db.DB)
+	return &UsuarioService{repository: repository}
 }
 
-func (s *UsuarioService) CrearUsuario(input dto.CrearUsuarioDTO) (*models.Usuario, error) {
-	// Validación: edad mínima
-	if input.Edad < 18 {
+func (service *UsuarioService) CrearUsuario(input dto.CrearUsuarioDTO) (*models.Usuario, error) {
+	if input.Edad < EdadMinimaPermitida {
 		return nil, errores.ErrMenorDeEdad
 	}
 
-	existe, _ := s.repo.ObtenerPorEmail(input.Email)
+	existe, _ := service.repository.ObtenerPorEmail(input.Email)
 	if existe != nil {
 		return nil, errores.ErrEmailYaExiste
 	}
@@ -37,15 +37,15 @@ func (s *UsuarioService) CrearUsuario(input dto.CrearUsuarioDTO) (*models.Usuari
 		Password: input.Password,
 	}
 
-	if err := s.repo.Crear(&usuario); err != nil {
-		return nil, errors.New("error al crear usuario")
+	if err := service.repository.Crear(&usuario); err != nil {
+		return nil, errores.ErrGenerico
 	}
 
 	return &usuario, nil
 }
 
-func (s *UsuarioService) Login(input dto.LoginDTO) (*models.Usuario, error) {
-	usuario, err := s.repo.ObtenerPorEmail(input.Email)
+func (service *UsuarioService) Login(input dto.LoginDTO) (*models.Usuario, error) {
+	usuario, err := service.repository.ObtenerPorEmail(input.Email)
 	if err != nil || usuario == nil {
 		return nil, errores.ErrUsuarioNoEncontrado
 	}

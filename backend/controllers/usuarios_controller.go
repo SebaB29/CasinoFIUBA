@@ -32,7 +32,7 @@ func CrearUsuario(c *gin.Context) {
 		case errores.ErrMenorDeEdad, errores.ErrEmailYaExiste:
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		default:
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Ocurrió un error al crear el usuario"})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		}
 		return
 	}
