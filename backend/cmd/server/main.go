@@ -1,19 +1,25 @@
 package main
 
 import (
-    "fmt"
-    "net/http"
+	_ "github.com/joho/godotenv/autoload"
+	"casino/db"
+	"casino/routes"
+	"os"
 )
 
-func handler(w http.ResponseWriter, r *http.Request) {
-    fmt.Fprintf(w, "Servidor backend funcionando (temporal).")
-}
-
 func main() {
-    http.HandleFunc("/", handler)
-    fmt.Println("Servidor backend escuchando en puerto 8080")
-    err := http.ListenAndServe(":8080", nil)
-    if err != nil {
-        fmt.Println("Error al iniciar el servidor:", err)
-    }
+	// Establece la conexion con la base de datos
+	db.ConectarDB()
+
+	// Inicializa las rutas del servidor (con GIN)
+	router := routes.SetupRoutes()
+
+	// Obtiene el puerto desde variables de entorno o usar el default
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+	}
+
+	// Inicia el servidor en el puerto especificado (es el 8080 por defecto)
+	router.Run(":" + port)
 }
