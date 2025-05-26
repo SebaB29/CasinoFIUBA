@@ -1,9 +1,11 @@
 package db
 
 import (
-	"casino/models"
+	"fmt"
 	"log"
 	"os"
+
+	"casino/models"
 
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -11,21 +13,32 @@ import (
 
 var DB *gorm.DB
 
-// Establece la conexión a PostgreSQL y migra los modelos
 func ConectarDB() {
-	dsn := os.Getenv("POSTGRES_DSN")
-	if dsn == "" {
-		log.Fatal("POSTGRES_DSN no definido")
+	host := os.Getenv("DB_HOST")
+	port := os.Getenv("DB_PORT")
+	user := os.Getenv("DB_USER")
+	password := os.Getenv("DB_PASSWORD")
+	dbname := os.Getenv("DB_NAME")
+
+	if host == "" || port == "" || user == "" || password == "" || dbname == "" {
+		log.Fatal("Faltan variables de entorno necesarias para la conexión a la DB")
 	}
+
+	dsn := fmt.Sprintf(
+		"host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
+		host, port, user, password, dbname,
+	)
 
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
-		log.Fatalf("Error al conectar a la base de datos: %v", err)
-	}
-
-	if err := db.AutoMigrate(&models.Usuario{}, &models.Apuesta{}); err != nil {
-		log.Fatalf("Error al migrar modelos: %v", err)
+		log.Fatal("Error al conectar a la base de datos:", err)
 	}
 
 	DB = db
+	log.Println("Base de datos conectada correctamente")
+
+	// Migrar modelo Usuario (crea tabla si no existe)
+	if err := DB.AutoMigrate(&models.Usuario{}); err != nil {
+		log.Fatalf("Error al migrar la base de datos: %v", err)
+	}
 }

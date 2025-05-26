@@ -1,25 +1,26 @@
 package routes
 
 import (
-	"casino/controllers"
+	"net/http"
+
 	"github.com/gin-gonic/gin"
 )
 
-//Inicializa el router y define todas las rutas de la api
+// SetupRoutes inicializa el router y todas las rutas principales
 func SetupRoutes() *gin.Engine {
 	r := gin.Default()
 
-	// Ruta base para verificar que el servidor esta activo
+	// Ruta de prueba o estado del servidor
 	r.GET("/", func(c *gin.Context) {
-		c.JSON(200, gin.H{"mensaje": "🎰 Casino API funcionando"})
+		c.JSON(http.StatusOK, gin.H{"mensaje": "🎰 Casino API funcionando"})
 	})
 
-	// Rutas de usuarios
-	r.POST("/usuarios", controllers.CrearUsuario)
-	r.GET("/usuarios", controllers.ObtenerUsuarios)
-
-	// Rutas de apuestas (provisoria)
-	r.POST("/apuestas", controllers.CrearApuesta)
+	// Grupo de rutas versión 1
+	v1 := r.Group("")
+	{
+		RegistroUsuarioRoutes(v1)
+		//RegistroApuestaRoutes(v1)
+	}
 
 	return r
 }

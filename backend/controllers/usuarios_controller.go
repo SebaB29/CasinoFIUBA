@@ -1,30 +1,36 @@
+// controllers/usuarios_controller.go
 package controllers
 
 import (
 	"casino/db"
-	"casino/models"
+	"casino/dto"
 	"casino/repositories"
+	"casino/services"
+
+	"net/http"
+
 	"github.com/gin-gonic/gin"
 )
 
 var usuarioRepo = repositories.NewUsuarioRepository(db.DB)
 
-// Guarda un nuevo usuario en la base de datos
+// var usuarioService = services.NewUsuarioService()
+
 func CrearUsuario(c *gin.Context) {
-	var u models.Usuario
+	var input dto.CrearUsuarioDTO
 
-	// Parsea el JSON recibido al struct Usuario
-	if err := c.ShouldBindJSON(&u); err != nil {
-		c.JSON(400, gin.H{"error": "JSON inválido"})
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "JSON inválido o campos faltantes"})
 		return
 	}
 
-	if err := usuarioRepo.Crear(&u); err != nil {
-		c.JSON(500, gin.H{"error": "Error al guardar el usuario"})
+	usuario, err := services.NewUsuarioService().CrearUsuario(input)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	c.JSON(201, u)
+	c.JSON(http.StatusCreated, usuario)
 }
 
 // Devuelve la lista de todos los usuarios (un get all users)

@@ -2,20 +2,18 @@ package repositories
 
 import (
 	"casino/models"
+
 	"gorm.io/gorm"
 )
 
-// Encapsula operaciones de base de datos para usuarios
 type UsuarioRepository struct {
 	db *gorm.DB
 }
 
-// Devuelve un nuevo repositorio de usuarios
 func NewUsuarioRepository(db *gorm.DB) *UsuarioRepository {
-	return &UsuarioRepository{db}
+	return &UsuarioRepository{db: db} // asignar correctamente
 }
 
-// Guarda un nuevo usuario en la base de datos
 func (r *UsuarioRepository) Crear(usuario *models.Usuario) error {
 	return r.db.Create(usuario).Error
 }
