@@ -2,10 +2,8 @@
 package controllers
 
 import (
-	"casino/db"
 	"casino/dto"
 	"casino/errores"
-	"casino/repositories"
 	"casino/services"
 
 	"net/http"
@@ -13,11 +11,16 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-var usuarioRepo = repositories.NewUsuarioRepository(db.DB)
+type UsuarioController struct {
+	service services.UsuarioServiceInterface
+}
 
-// var usuarioService = services.NewUsuarioService() DESPUES HAY QUE REVISAR Y CORREGIRLO POR #1
+func NewUsuarioController() *UsuarioController {
+	service := services.NewUsuarioService()
+	return &UsuarioController{service: service}
+}
 
-func CrearUsuario(c *gin.Context) {
+func (ctrl *UsuarioController) CrearUsuario(c *gin.Context) {
 	var input dto.CrearUsuarioDTO
 
 	if err := c.ShouldBindJSON(&input); err != nil {
@@ -25,8 +28,7 @@ func CrearUsuario(c *gin.Context) {
 		return
 	}
 
-	// #1: ESTO NO ES LO IDEAL PORQUE SE CREA UNA INSTANCIA DEL SERVICE CADA VEZ QUE SE USA, HABRIA QUE HACER UN SETUP
-	usuario, err := services.NewUsuarioService().CrearUsuario(input)
+	usuario, err := ctrl.service.CrearUsuario(input)
 	if err != nil {
 		switch err {
 		case errores.ErrMenorDeEdad, errores.ErrEmailYaExiste:
@@ -40,7 +42,7 @@ func CrearUsuario(c *gin.Context) {
 	c.JSON(http.StatusCreated, usuario)
 }
 
-func LoginUsuario(c *gin.Context) {
+func (ctrl *UsuarioController) LoginUsuario(c *gin.Context) {
 	var input dto.LoginDTO
 
 	if err := c.ShouldBindJSON(&input); err != nil {
@@ -48,13 +50,12 @@ func LoginUsuario(c *gin.Context) {
 		return
 	}
 
-	usuario, err := services.NewUsuarioService().Login(input)
+	usuario, err := ctrl.service.Login(input)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return
 	}
 
-	// Devuelve datos del usuario sin contraseña
 	c.JSON(http.StatusOK, gin.H{
 		"id":      usuario.ID,
 		"nombre":  usuario.Nombre,
@@ -64,12 +65,12 @@ func LoginUsuario(c *gin.Context) {
 }
 
 // Devuelve la lista de todos los usuarios (un get all users)
-func ObtenerUsuarios(c *gin.Context) {
-	usuarios, err := usuarioRepo.ObtenerTodos()
-	if err != nil {
-		c.JSON(500, gin.H{"error": "Error al obtener usuarios"})
-		return
-	}
+// func ObtenerUsuarios(c *gin.Context) {
+// 	usuarios, err := usuarioRepo.ObtenerTodos()
+// 	if err != nil {
+// 		c.JSON(500, gin.H{"error": "Error al obtener usuarios"})
+// 		return
+// 	}
 
-	c.JSON(200, usuarios)
-}
+// 	c.JSON(200, usuarios)
+// }

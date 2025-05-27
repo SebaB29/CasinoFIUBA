@@ -18,7 +18,7 @@ func SetupRoutes() *gin.Engine {
 	// Grupo de rutas versión 1
 	v1 := r.Group("")
 	{
-		RegistroUsuarioRoutes(v1)
+		UsuarioRoutes(v1)
 		//RegistroApuestaRoutes(v1)
 	}
 

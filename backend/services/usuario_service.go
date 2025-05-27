@@ -10,8 +10,13 @@ import (
 
 const EdadMinimaPermitida = 18
 
+type UsuarioServiceInterface interface {
+	CrearUsuario(input dto.CrearUsuarioDTO) (*models.Usuario, error)
+	Login(input dto.LoginDTO) (*models.Usuario, error)
+}
+
 type UsuarioService struct {
-	repository *repositories.UsuarioRepository
+	repository repositories.UsuarioRepositoryInterface
 }
 
 func NewUsuarioService() *UsuarioService {
