@@ -6,13 +6,14 @@ import (
 	"casino/errores"
 	"casino/models"
 	"casino/repositories"
+	"casino/utils"
 )
 
 const EdadMinimaPermitida = 18
 
 type UsuarioServiceInterface interface {
 	CrearUsuario(input dto.CrearUsuarioDTO) (*models.Usuario, error)
-	Login(input dto.LoginDTO) (*models.Usuario, error)
+	Login(input dto.LoginDTO) (*models.Usuario, string, error)
 }
 
 type UsuarioService struct {
@@ -49,15 +50,20 @@ func (service *UsuarioService) CrearUsuario(input dto.CrearUsuarioDTO) (*models.
 	return &usuario, nil
 }
 
-func (service *UsuarioService) Login(input dto.LoginDTO) (*models.Usuario, error) {
+func (service *UsuarioService) Login(input dto.LoginDTO) (*models.Usuario, string, error) {
 	usuario, err := service.repository.ObtenerPorEmail(input.Email)
 	if err != nil || usuario == nil {
-		return nil, errores.ErrUsuarioNoEncontrado
+		return nil, "", errores.ErrUsuarioNoEncontrado
 	}
 
 	if usuario.Password != input.Password {
-		return nil, errores.ErrPasswordIncorrecta
+		return nil, "", errores.ErrPasswordIncorrecta
 	}
 
-	return usuario, nil
+	token, err := utils.GenerateToken(usuario.ID)
+	if err != nil {
+		return nil, "", err
+	}
+
+	return usuario, token, nil
 }

@@ -1,13 +1,16 @@
 package main
 
 import (
-	_ "github.com/joho/godotenv/autoload"
+	"casino/config"
 	"casino/db"
 	"casino/routes"
 	"os"
+
+	_ "github.com/joho/godotenv/autoload"
 )
 
 func main() {
+	config.Load()
 	// Establece la conexion con la base de datos
 	db.ConectarDB()
 

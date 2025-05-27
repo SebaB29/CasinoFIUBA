@@ -50,7 +50,7 @@ func (ctrl *UsuarioController) LoginUsuario(c *gin.Context) {
 		return
 	}
 
-	usuario, err := ctrl.service.Login(input)
+	usuario, token, err := ctrl.service.Login(input)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return
@@ -60,6 +60,7 @@ func (ctrl *UsuarioController) LoginUsuario(c *gin.Context) {
 		"id":      usuario.ID,
 		"nombre":  usuario.Nombre,
 		"email":   usuario.Email,
+		"token":   token,
 		"mensaje": "Inicio de sesión exitoso",
 	})
 }
