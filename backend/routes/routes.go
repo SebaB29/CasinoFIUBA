@@ -12,7 +12,7 @@ func SetupRoutes() *gin.Engine {
 
 	// Ruta de prueba o estado del servidor
 	r.GET("/", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{"mensaje": "🎰 Casino API funcionando"})
+		c.JSON(http.StatusOK, gin.H{"mensaje": "Casino API funcionando"})
 	})
 
 	// Grupo de rutas versión 1
