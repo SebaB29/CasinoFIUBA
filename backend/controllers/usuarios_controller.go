@@ -1,23 +1,25 @@
-// controllers/usuarios_controller.go
 package controllers
 
 import (
-	"casino/db"
 	"casino/dto"
 	"casino/errores"
-	"casino/repositories"
 	"casino/services"
-
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 )
 
-var usuarioRepo = repositories.NewUsuarioRepository(db.DB)
+type UsuarioController struct {
+	service services.UsuarioServiceInterface
+}
 
-// var usuarioService = services.NewUsuarioService() DESPUES HAY QUE REVISAR Y CORREGIRLO POR #1
+func NewUsuarioController() *UsuarioController {
+	service := services.NewUsuarioService()
+	return &UsuarioController{service: service}
+}
 
-func CrearUsuario(c *gin.Context) {
+func (ctrl *UsuarioController) CrearUsuario(c *gin.Context) {
 	var input dto.CrearUsuarioDTO
 
 	if err := c.ShouldBindJSON(&input); err != nil {
@@ -25,14 +27,13 @@ func CrearUsuario(c *gin.Context) {
 		return
 	}
 
-	// #1: ESTO NO ES LO IDEAL PORQUE SE CREA UNA INSTANCIA DEL SERVICE CADA VEZ QUE SE USA, HABRIA QUE HACER UN SETUP
-	usuario, err := services.NewUsuarioService().CrearUsuario(input)
+	usuario, err := ctrl.service.CrearUsuario(input)
 	if err != nil {
 		switch err {
 		case errores.ErrMenorDeEdad, errores.ErrEmailYaExiste:
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		default:
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Ocurrió un error al crear el usuario"})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		}
 		return
 	}
@@ -40,13 +41,52 @@ func CrearUsuario(c *gin.Context) {
 	c.JSON(http.StatusCreated, usuario)
 }
 
-// Devuelve la lista de todos los usuarios (un get all users)
-func ObtenerUsuarios(c *gin.Context) {
-	usuarios, err := usuarioRepo.ObtenerTodos()
-	if err != nil {
-		c.JSON(500, gin.H{"error": "Error al obtener usuarios"})
+func (ctrl *UsuarioController) LoginUsuario(c *gin.Context) {
+	var input dto.LoginDTO
+
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "JSON inválido o campos faltantes"})
 		return
 	}
 
-	c.JSON(200, usuarios)
+	usuario, token, err := ctrl.service.Login(input)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"id":      usuario.ID,
+		"nombre":  usuario.Nombre,
+		"email":   usuario.Email,
+		"token":   token,
+		"mensaje": "Inicio de sesión exitoso",
+	})
+}
+
+// GET /usuarios
+func (ctrl *UsuarioController) ObtenerTodosLosUsuarios(c *gin.Context) {
+	usuarios, err := ctrl.service.ObtenerTodos()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error al obtener usuarios"})
+		return
+	}
+	c.JSON(http.StatusOK, usuarios)
+}
+
+// GET /usuarios (por id)
+func (ctrl *UsuarioController) ObtenerUsuarioPorID(c *gin.Context) {
+	idStr := c.Param("id")
+	id, err := strconv.ParseUint(idStr, 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "ID inválido"})
+		return
+	}
+
+	usuario, err := ctrl.service.ObtenerPorID(uint(id))
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, usuario)
 }
