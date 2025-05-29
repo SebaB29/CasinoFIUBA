@@ -21,7 +21,7 @@ func NewUsuarioController() *UsuarioController {
 }
 
 func (ctrl *UsuarioController) CrearUsuario(c *gin.Context) {
-	var input dto.CrearUsuarioDTO
+	var input dto.RegistroUsuarioRequestDTO
 
 	if err := c.ShouldBindJSON(&input); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "JSON inválido o campos faltantes"})
@@ -43,14 +43,14 @@ func (ctrl *UsuarioController) CrearUsuario(c *gin.Context) {
 }
 
 func (ctrl *UsuarioController) LoginUsuario(c *gin.Context) {
-	var input dto.LoginDTO
+	var input dto.LoginRequestDTO
 
 	if err := c.ShouldBindJSON(&input); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "JSON inválido o campos faltantes"})
 		return
 	}
 
-	usuario, token, err := ctrl.service.Login(input)
+	usuario, err := ctrl.service.Login(input)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return
@@ -60,7 +60,7 @@ func (ctrl *UsuarioController) LoginUsuario(c *gin.Context) {
 		"id":      usuario.ID,
 		"nombre":  usuario.Nombre,
 		"email":   usuario.Email,
-		"token":   token,
+		"token":   usuario.Token,
 		"mensaje": "Inicio de sesión exitoso",
 	})
 }
