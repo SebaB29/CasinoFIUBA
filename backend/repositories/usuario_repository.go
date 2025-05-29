@@ -9,6 +9,8 @@ import (
 type UsuarioRepositoryInterface interface {
 	Crear(usuario *models.Usuario) error
 	ObtenerPorEmail(email string) (*models.Usuario, error)
+	ObtenerPorID(id uint) (*models.Usuario, error)
+	Actualizar(usuario *models.Usuario) error
 }
 
 type UsuarioRepository struct {
@@ -32,12 +34,18 @@ func (repository *UsuarioRepository) ObtenerPorEmail(email string) (*models.Usua
 	return &usuario, err
 }
 
-// // Busca un usuario por su ID
-// func (r *UsuarioRepository) ObtenerPorID(id uint) (*models.Usuario, error) {
-// 	var u models.Usuario
-// 	err := r.db.First(&u, id).Error
-// 	return &u, err
-// }
+func (repository *UsuarioRepository) ObtenerPorID(id uint) (*models.Usuario, error) {
+	var usuario models.Usuario
+	err := repository.db.First(&usuario, id).Error
+	if err == gorm.ErrRecordNotFound {
+		return nil, nil
+	}
+	return &usuario, err
+}
+
+func (repository *UsuarioRepository) Actualizar(usuario *models.Usuario) error {
+	return repository.db.Save(usuario).Error
+}
 
 // // Devuelve la lista de todos los usuarios
 // func (r *UsuarioRepository) ObtenerTodos() ([]models.Usuario, error) {

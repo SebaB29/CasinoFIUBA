@@ -19,6 +19,7 @@ func SetupRoutes() *gin.Engine {
 	v1 := r.Group("")
 	{
 		UsuarioRoutes(v1)
+		TransaccionRoutes(v1)
 		//RegistroApuestaRoutes(v1)
 	}
 
