@@ -7,6 +7,8 @@ import (
 	"casino/repositories"
 )
 
+const MontoMinimo = 1.0
+
 type TransaccionServiceInterface interface {
 	Depositar(usuarioID uint, monto float64) error
 	Extraer(usuarioID uint, monto float64) error
@@ -30,6 +32,10 @@ func (transaccionService *TransaccionService) Depositar(usuarioID uint, monto fl
 		return errores.ErrUsuarioNoEncontrado
 	}
 
+	if monto < MontoMinimo {
+		return errores.ErrMontoInsuficiente
+	}
+
 	usuario.Saldo += monto
 	if err := transaccionService.usuarioRepository.Actualizar(usuario); err != nil {
 		return err
@@ -48,6 +54,10 @@ func (transaccionService *TransaccionService) Extraer(usuarioID uint, monto floa
 	usuario, err := transaccionService.usuarioRepository.ObtenerPorID(usuarioID)
 	if err != nil || usuario == nil {
 		return errores.ErrUsuarioNoEncontrado
+	}
+
+	if monto < MontoMinimo {
+		return errores.ErrMontoInsuficiente
 	}
 
 	if usuario.Saldo < monto {

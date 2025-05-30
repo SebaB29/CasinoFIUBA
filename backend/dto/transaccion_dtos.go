@@ -1,6 +1,6 @@
 package dto
 
 type TransaccionDTO struct {
-	Monto float64 `json:"monto" binding:"required,gt=0"`
+	Monto float64 `json:"monto" binding:"required"`
 	Tipo  string  `json:"tipo" binding:"required"`
 }
