@@ -7,13 +7,17 @@ import (
 	"casino/models"
 	"casino/repositories"
 	"casino/utils"
+	"time"
 )
 
 const EdadMinimaPermitida = 18
+const FormatoFechaNacimiento = "2006-01-02"
 
 type UsuarioServiceInterface interface {
 	CrearUsuario(request dto.RegistroUsuarioRequestDTO) (*dto.RegistroUsuarioResponseDTO, error)
 	Login(request dto.LoginRequestDTO) (*dto.LoginResponseDTO, error)
+	ObtenerPorID(id uint) (*models.Usuario, error)
+	ObtenerTodos() ([]models.Usuario, error)
 }
 
 type UsuarioService struct {
@@ -26,7 +30,12 @@ func NewUsuarioService() *UsuarioService {
 }
 
 func (service *UsuarioService) CrearUsuario(request dto.RegistroUsuarioRequestDTO) (*dto.RegistroUsuarioResponseDTO, error) {
-	if request.Edad < EdadMinimaPermitida {
+	fechaNacimiento, err := time.Parse("2006-01-02", request.FechaNacimiento)
+	if err != nil {
+		return nil, errores.ErrFormatoFechaInvalido
+	}
+
+	if esMenorDeEdad(fechaNacimiento) {
 		return nil, errores.ErrMenorDeEdad
 	}
 
@@ -36,11 +45,11 @@ func (service *UsuarioService) CrearUsuario(request dto.RegistroUsuarioRequestDT
 	}
 
 	usuario := models.Usuario{
-		Nombre:   request.Nombre,
-		Apellido: request.Apellido,
-		Edad:     request.Edad,
-		Email:    request.Email,
-		Password: request.Password,
+		Nombre:          request.Nombre,
+		Apellido:        request.Apellido,
+		FechaNacimiento: fechaNacimiento,
+		Email:           request.Email,
+		Password:        request.Password,
 	}
 
 	if err := service.repository.Crear(&usuario); err != nil {
@@ -48,12 +57,12 @@ func (service *UsuarioService) CrearUsuario(request dto.RegistroUsuarioRequestDT
 	}
 
 	response := dto.RegistroUsuarioResponseDTO{
-		ID:       usuario.ID,
-		Nombre:   usuario.Nombre,
-		Apellido: usuario.Apellido,
-		Edad:     usuario.Edad,
-		Email:    usuario.Email,
-		Saldo:    usuario.Saldo,
+		ID:              usuario.ID,
+		Nombre:          usuario.Nombre,
+		Apellido:        usuario.Apellido,
+		FechaNacimiento: fechaNacimiento,
+		Email:           usuario.Email,
+		Saldo:           usuario.Saldo,
 	}
 
 	return &response, nil
@@ -82,4 +91,27 @@ func (service *UsuarioService) Login(request dto.LoginRequestDTO) (*dto.LoginRes
 	}
 
 	return &response, nil
+}
+
+// NUEVA FUNCIONALIDAD ObtenerPorID busca un usuario por su ID y devuelve un error si no se encuentra
+func (service *UsuarioService) ObtenerPorID(id uint) (*models.Usuario, error) {
+	usuario, err := service.repository.ObtenerPorID(id)
+	if err != nil {
+		return nil, errores.ErrUsuarioNoEncontrado
+	}
+	return usuario, nil
+}
+
+// NUEVA FUNCIONALIDAD ObtenerTodos devuelve todos los usuarios registrados en el sistema
+func (service *UsuarioService) ObtenerTodos() ([]models.Usuario, error) {
+	return service.repository.ObtenerTodos()
+}
+
+func esMenorDeEdad(nacimiento time.Time) bool {
+	hoy := time.Now()
+	edad := hoy.Year() - nacimiento.Year()
+	if hoy.Month() < nacimiento.Month() || (hoy.Month() == nacimiento.Month() && hoy.Day() < nacimiento.Day()) {
+		edad--
+	}
+	return edad < EdadMinimaPermitida
 }

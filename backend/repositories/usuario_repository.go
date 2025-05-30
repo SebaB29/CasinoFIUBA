@@ -10,6 +10,7 @@ type UsuarioRepositoryInterface interface {
 	Crear(usuario *models.Usuario) error
 	ObtenerPorEmail(email string) (*models.Usuario, error)
 	ObtenerPorID(id uint) (*models.Usuario, error)
+	ObtenerTodos() ([]models.Usuario, error)
 	Actualizar(usuario *models.Usuario) error
 }
 
@@ -37,19 +38,15 @@ func (repository *UsuarioRepository) ObtenerPorEmail(email string) (*models.Usua
 func (repository *UsuarioRepository) ObtenerPorID(id uint) (*models.Usuario, error) {
 	var usuario models.Usuario
 	err := repository.db.First(&usuario, id).Error
-	if err == gorm.ErrRecordNotFound {
-		return nil, nil
-	}
 	return &usuario, err
+}
+
+func (repository *UsuarioRepository) ObtenerTodos() ([]models.Usuario, error) {
+	var lista []models.Usuario
+	err := repository.db.Find(&lista).Error
+	return lista, err
 }
 
 func (repository *UsuarioRepository) Actualizar(usuario *models.Usuario) error {
 	return repository.db.Save(usuario).Error
 }
-
-// // Devuelve la lista de todos los usuarios
-// func (r *UsuarioRepository) ObtenerTodos() ([]models.Usuario, error) {
-// 	var lista []models.Usuario
-// 	err := r.db.Find(&lista).Error
-// 	return lista, err
-// }

@@ -5,8 +5,8 @@ import (
 	"casino/dto"
 	"casino/errores"
 	"casino/services"
-
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 )
@@ -65,13 +65,29 @@ func (ctrl *UsuarioController) LoginUsuario(c *gin.Context) {
 	})
 }
 
-// Devuelve la lista de todos los usuarios (un get all users)
-// func ObtenerUsuarios(c *gin.Context) {
-// 	usuarios, err := usuarioRepo.ObtenerTodos()
-// 	if err != nil {
-// 		c.JSON(500, gin.H{"error": "Error al obtener usuarios"})
-// 		return
-// 	}
+// GET /usuarios
+func (ctrl *UsuarioController) ObtenerTodosLosUsuarios(c *gin.Context) {
+	usuarios, err := ctrl.service.ObtenerTodos()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error al obtener usuarios"})
+		return
+	}
+	c.JSON(http.StatusOK, usuarios)
+}
 
-// 	c.JSON(200, usuarios)
-// }
+// GET /usuarios (por id)
+func (ctrl *UsuarioController) ObtenerUsuarioPorID(c *gin.Context) {
+	idStr := c.Param("id")
+	id, err := strconv.ParseUint(idStr, 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "ID inválido"})
+		return
+	}
+
+	usuario, err := ctrl.service.ObtenerPorID(uint(id))
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, usuario)
+}
