@@ -6,12 +6,19 @@ import (
 	"gorm.io/gorm"
 )
 
+type UsuarioRepositoryInterface interface {
+	Crear(usuario *models.Usuario) error
+	ObtenerPorEmail(email string) (*models.Usuario, error)
+	ObtenerPorID(id uint) (*models.Usuario, error)
+	ObtenerTodos() ([]models.Usuario, error)
+}
+
 type UsuarioRepository struct {
 	db *gorm.DB
 }
 
 func NewUsuarioRepository(db *gorm.DB) *UsuarioRepository {
-	return &UsuarioRepository{db: db} // asignar correctamente
+	return &UsuarioRepository{db: db}
 }
 
 func (r *UsuarioRepository) Crear(usuario *models.Usuario) error {
@@ -22,19 +29,17 @@ func (r *UsuarioRepository) ObtenerPorEmail(email string) (*models.Usuario, erro
 	var u models.Usuario
 	err := r.db.Where("email = ?", email).First(&u).Error
 	if err == gorm.ErrRecordNotFound {
-		return nil, nil // no existe
+		return nil, nil
 	}
-	return &u, err // devuelve usuario o error real
+	return &u, err
 }
 
-// Busca un usuario por su ID
 func (r *UsuarioRepository) ObtenerPorID(id uint) (*models.Usuario, error) {
 	var u models.Usuario
 	err := r.db.First(&u, id).Error
 	return &u, err
 }
 
-// Devuelve la lista de todos los usuarios
 func (r *UsuarioRepository) ObtenerTodos() ([]models.Usuario, error) {
 	var lista []models.Usuario
 	err := r.db.Find(&lista).Error

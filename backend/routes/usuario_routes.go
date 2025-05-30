@@ -2,12 +2,14 @@ package routes
 
 import (
 	"casino/controllers"
-
 	"github.com/gin-gonic/gin"
 )
 
-func RegistroUsuarioRoutes(rg *gin.RouterGroup) {
+func UsuarioRoutes(rg *gin.RouterGroup) {
 	usuarios := rg.Group("/usuarios")
+
+	// Crea instancia del controlador correctamente
+	usuarioController := controllers.NewUsuarioController()
 
 	// RUTAS PÚBLICAS
 	usuarios.POST("/registro", usuarioController.CrearUsuario)
@@ -17,6 +19,6 @@ func RegistroUsuarioRoutes(rg *gin.RouterGroup) {
 	usuarios.GET("/", usuarioController.ObtenerTodosLosUsuarios)
 	usuarios.GET("/:id", usuarioController.ObtenerUsuarioPorID)
 
-	// RUTAS PROTEGIDAS (futuro)
+	// RUTAS PROTEGIDAS (mas adelante)
 	// usuarios.GET("/perfil", middleware.JWTAuthMiddleware(), usuarioController.PerfilUsuario)
 }

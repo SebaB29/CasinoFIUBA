@@ -7,4 +7,6 @@ var (
 	ErrMenorDeEdad             = errors.New("tienes que ser mayor de edad para registrarte")
 	ErrFormatoFechaInvalido    = errors.New("la fecha de nacimiento no tiene el formato correcto (YYYY-MM-DD)")
 	ErrGenerico                = errors.New("error al crear usuario")
+	ErrUsuarioNoEncontrado     = errors.New("usuario no encontrado")
+	ErrPasswordIncorrecta      = errors.New("la contraseña ingresada es incorrecta")
 )
