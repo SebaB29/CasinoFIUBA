@@ -14,3 +14,7 @@ type Usuario struct {
 	Rol             string        `json:"rol" gorm:"default:user"`
 	Transacciones   []Transaccion `json:"transacciones" gorm:"constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
 }
+
+func (Usuario) TableName() string {
+	return "usuarios"
+}
