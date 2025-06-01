@@ -78,7 +78,7 @@ func (service *UsuarioService) Login(request dto.LoginRequestDTO) (*dto.LoginRes
 		return nil, errores.ErrPasswordIncorrecta
 	}
 
-	token, err := utils.GenerateToken(usuario.ID)
+	token, err := utils.GenerateToken(usuario.ID, usuario.Rol)
 	if err != nil {
 		return nil, err
 	}

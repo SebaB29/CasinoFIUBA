@@ -8,7 +8,12 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func JWTAuthMiddleware() gin.HandlerFunc {
+func JWTAuthMiddleware(requiredRole ...string) gin.HandlerFunc {
+	role := "" // valor por defecto: no se requiere rol
+	if len(requiredRole) > 0 {
+		role = requiredRole[0]
+	}
+
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
 		if authHeader == "" {
@@ -31,8 +36,16 @@ func JWTAuthMiddleware() gin.HandlerFunc {
 			return
 		}
 
+		// Validar rol si se requiere uno
+		if role != "" && claims.Rol != role {
+			c.JSON(http.StatusForbidden, gin.H{"error": "se requiere rol " + role})
+			c.Abort()
+			return
+		}
+
 		// Podés guardar los claims en el contexto para usar en handlers
 		c.Set("userID", claims.UserID)
+		c.Set("rol", claims.Rol)
 
 		c.Next()
 	}
