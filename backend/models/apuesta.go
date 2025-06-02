@@ -11,3 +11,7 @@ type Apuesta struct {
 	Resultado string    `json:"resultado"`
 	Fecha     time.Time `json:"fecha"`
 }
+
+func (Apuesta) TableName() string {
+	return "apuestas"
+}
