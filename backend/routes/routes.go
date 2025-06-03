@@ -20,6 +20,7 @@ func SetupRoutes() *gin.Engine {
 	{
 		UsuarioRoutes(v1)
 		TransaccionRoutes(v1)
+		JuegosRoutes(v1)
 		//RegistroApuestaRoutes(v1)
 	}
 
