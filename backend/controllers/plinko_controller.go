@@ -1,28 +1,36 @@
 package controllers
 
 import (
+	"casino/dto"
 	"casino/services"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 )
 
-type PlinkoController struct{}
+type PlinkoController struct {
+	service *services.PlinkoService
+}
 
 func NewPlinkoController() *PlinkoController {
-	return &PlinkoController{}
+	return &PlinkoController{
+		service: services.NewPlinkoService(),
+	}
 }
 
 func (ctrl *PlinkoController) Jugar(c *gin.Context) {
-	const monto = 100.0 // Monto fijo para test
+	var input dto.PlinkoRequestDTO
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Datos inválidos o monto faltante"})
+		return
+	}
 
-	resultado := services.JugarPlinko(monto)
+	userID := c.GetUint("userID")
+	resultado, err := ctrl.service.Jugar(userID, input.Monto)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"mensaje":           "Jugada realizada",
-		"monto_apostado":    monto,
-		"posicion_final":    resultado.PosicionFinal,
-		"multiplicador":     resultado.Multiplicador,
-		"ganancia_obtenida": resultado.Ganancia,
-	})
+	c.JSON(http.StatusOK, resultado)
 }
