@@ -1,8 +1,8 @@
 package controllers
 
 import (
-	"casino/dto"
-	"casino/services"
+	dto "casino/dto/juegos"
+	services "casino/services/juegos"
 	"net/http"
 
 	"github.com/gin-gonic/gin"

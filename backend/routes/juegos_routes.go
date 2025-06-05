@@ -1,7 +1,7 @@
 package routes
 
 import (
-	"casino/controllers"
+	controllers "casino/controllers/juegos"
 	"casino/middleware"
 
 	"github.com/gin-gonic/gin"

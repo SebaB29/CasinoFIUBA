@@ -2,39 +2,49 @@ package services
 
 import (
 	"casino/db"
-	"casino/dto"
+	dto "casino/dto/juegos"
 	"casino/errores"
 	"casino/models"
 	"casino/repositories"
+	repositoriesJuegos "casino/repositories/juegos"
 	"math/rand"
 	"time"
 )
 
 type PlinkoService struct {
-	usuarioRepository repositories.UsuarioRepositoryInterface
-	jugadaRepository  repositories.JugadaPlinkoRepositoryInterface
+	usuarioRepository     repositories.UsuarioRepositoryInterface
+	jugadaRepository      repositoriesJuegos.JugadaPlinkoRepositoryInterface
+	transaccionRepository repositories.TransaccionRepositoryInterface
 }
 
 func NewPlinkoService() *PlinkoService {
 	return &PlinkoService{
-		usuarioRepository: repositories.NewUsuarioRepository(db.DB),
-		jugadaRepository:  repositories.NewJugadaPlinkoRepository(db.DB),
+		usuarioRepository:     repositories.NewUsuarioRepository(db.DB),
+		jugadaRepository:      repositoriesJuegos.NewJugadaPlinkoRepository(db.DB),
+		transaccionRepository: repositories.NewTransaccionRepository(db.DB),
 	}
 }
 
 // Lógica del juego
 func ejecutarPlinko(monto float64) dto.PlinkoResponseDTO {
 	const niveles = 8
+	const centro = 4
 
 	// Crear generador local con semilla única
 	source := rand.NewSource(time.Now().UnixNano())
 	r := rand.New(source)
 
+	// Posición inicial
+	pos := centro
+
 	// Simular rebotes
-	pos := 0
 	for i := 0; i < niveles; i++ {
 		direccion := r.Intn(2) // 0 = izquierda, 1 = derecha
-		pos += direccion
+		if direccion == 0 && pos > 0 {
+			pos--
+		} else if direccion == 1 && pos < 8 {
+			pos++
+		}
 	}
 
 	// Multiplicadores por posición
@@ -58,12 +68,11 @@ func (plinkoService *PlinkoService) Jugar(usuarioID uint, monto float64) (dto.Pl
 
 	resultado := ejecutarPlinko(monto)
 
-	usuario.Saldo = usuario.Saldo - monto + resultado.Ganancia
-	if err := plinkoService.usuarioRepository.Actualizar(usuario); err != nil {
+	if err := plinkoService.procesarResultado(usuario, monto, resultado); err != nil {
 		return dto.PlinkoResponseDTO{}, err
 	}
 
-	if err := plinkoService.guardarJugada(usuario.ID, monto, resultado); err != nil {
+	if err := plinkoService.registrarJugada(usuario.ID, monto, resultado); err != nil {
 		return dto.PlinkoResponseDTO{}, err
 	}
 
@@ -89,7 +98,27 @@ func (plinkoService *PlinkoService) validarJugada(usuarioID uint, monto float64)
 	return usuario, nil
 }
 
-func (plinkoService *PlinkoService) guardarJugada(usuarioID uint, monto float64, resultado dto.PlinkoResponseDTO) error {
+func (plinkoService *PlinkoService) procesarResultado(usuario *models.Usuario, monto float64, resultado dto.PlinkoResponseDTO) error {
+	// Registrar transacción de apuesta
+	if err := plinkoService.registrarTransaccion(usuario.ID, "apuesta", monto); err != nil {
+		return err
+	}
+
+	// Actualizar saldo
+	usuario.Saldo = usuario.Saldo - monto + resultado.Ganancia
+	if err := plinkoService.usuarioRepository.Actualizar(usuario); err != nil {
+		return err
+	}
+
+	// Registrar transacción de ganancia
+	if err := plinkoService.registrarTransaccion(usuario.ID, "ganancia", resultado.Ganancia); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (plinkoService *PlinkoService) registrarJugada(usuarioID uint, monto float64, resultado dto.PlinkoResponseDTO) error {
 	jugada := &models.JugadaPlinko{
 		UsuarioID:     usuarioID,
 		MontoApostado: monto,
@@ -99,4 +128,14 @@ func (plinkoService *PlinkoService) guardarJugada(usuarioID uint, monto float64,
 		Fecha:         time.Now(),
 	}
 	return plinkoService.jugadaRepository.Crear(jugada)
+}
+
+func (plinkoService *PlinkoService) registrarTransaccion(usuarioID uint, tipoTransaccion string, monto float64) error {
+	transaccion := &models.Transaccion{
+		UsuarioID: usuarioID,
+		Tipo:      tipoTransaccion,
+		Monto:     monto,
+	}
+
+	return plinkoService.transaccionRepository.Crear(transaccion)
 }
