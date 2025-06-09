@@ -40,6 +40,7 @@ func ConectarDB() {
 	// Se eliminan las tablas para poder testear bien las cosas. LUEGO SACAR
 	db.Migrator().DropTable(&models.Usuario{})
 	db.Migrator().DropTable(&models.Transaccion{})
+	db.Migrator().DropTable(&models.JugadaPlinko{})
 
 	// Se crean las tablas de la BD
 	// Migrar modelo Usuario (crea tabla si no existe)
@@ -47,6 +48,9 @@ func ConectarDB() {
 		log.Fatalf("Error al migrar la base de datos: %v", err)
 	}
 	if err := DB.AutoMigrate(&models.Transaccion{}); err != nil {
+		log.Fatalf("Error al migrar la base de datos: %v", err)
+	}
+	if err := DB.AutoMigrate(&models.JugadaPlinko{}); err != nil {
 		log.Fatalf("Error al migrar la base de datos: %v", err)
 	}
 }
