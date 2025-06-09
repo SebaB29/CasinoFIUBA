@@ -2,11 +2,11 @@ package controllers
 
 import (
 	"bytes"
-	"io"
 	"casino/db"
 	"casino/juegos/buscaminas"
 	"casino/models"
-	"casino/repositories"
+	repositories "casino/repositories/juegos"
+	"io"
 	"log"
 	"net/http"
 
@@ -15,8 +15,8 @@ import (
 
 type AbrirCeldaRequest struct {
 	IDPartida uint `json:"id_partida" binding:"required"`
-	Fila      *int  `json:"fila" binding:"required,min=0,max=4"`
-	Col       *int  `json:"col" binding:"required,min=0,max=4"`
+	Fila      *int `json:"fila" binding:"required,min=0,max=4"`
+	Col       *int `json:"col" binding:"required,min=0,max=4"`
 }
 
 type NuevaPartidaRequest struct {
@@ -48,7 +48,7 @@ func CrearPartidaBuscaminas(c *gin.Context) {
 
 	repo := repositories.NewBuscaminasRepository(db.DB)
 	partidaDB := &models.PartidaBuscaminas{
-		UsuarioID:      &userID, 
+		UsuarioID:      &userID,
 		Estado:         string(partida.Estado),
 		CeldasAbiertas: partida.CeldasAbiertas,
 		CantidadMinas:  partida.CantidadMinas,
