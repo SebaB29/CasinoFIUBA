@@ -49,4 +49,10 @@ func ConectarDB() {
 	if err := DB.AutoMigrate(&models.Transaccion{}); err != nil {
 		log.Fatalf("Error al migrar la base de datos: %v", err)
 	}
+
+	// Migrar modelo PartidaBuscaminas (crea tabla si no existe)
+	if err := DB.AutoMigrate(&models.PartidaBuscaminas{}); err != nil {
+	log.Fatalf("Error al migrar la base de datos: %v", err)
+}
+
 }

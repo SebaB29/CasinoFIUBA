@@ -29,7 +29,7 @@ func CrearPartida(filas, columnas, cantidadMinas int, montoApostado float64) (*P
 	}
 
 	tablero := NewTablero(filas, columnas)
-	tablero.GenerarMinas(cantidadMinas) // delegación
+	tablero.GenerarMinas(cantidadMinas)
 	tablero.ContarMinasVecinas()
 
 	partida := &Partida{
@@ -116,14 +116,3 @@ func (p *Partida) Retirarse() (float64, error) {
 	premio := p.MontoApostado * (1 + factorDificultad*progreso)
 	return premio, nil
 }
-
-var partidaActual *Partida // Solo para pruebas, se elimina en la versión final
-
-func ObtenerPartidaActual() *Partida {
-    return partidaActual
-}
-
-func SetPartidaActual(p *Partida) {
-    partidaActual = p
-}
-
