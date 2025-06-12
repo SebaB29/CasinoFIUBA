@@ -5,7 +5,8 @@ type PlinkoRequestDTO struct {
 }
 
 type PlinkoResponseDTO struct {
-	PosicionFinal int     `json:"posicion_final"`
-	Multiplicador float64 `json:"multiplicador"`
-	Ganancia      float64 `json:"ganancia"`
+	PosicionFinal int      `json:"posicion_final"`
+	Multiplicador float64  `json:"multiplicador"`
+	Ganancia      float64  `json:"ganancia"`
+	Trayecto      []string `json:"trayecto"`
 }

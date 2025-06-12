@@ -7,8 +7,14 @@ import (
 	"casino/models"
 	"casino/repositories"
 	repositoriesJuegos "casino/repositories/juegos"
+	"encoding/json"
 	"math/rand"
 	"time"
+)
+
+const (
+	TipoTransaccionApuesta  = "apuesta"
+	TipoTransaccionGanancia = "ganancia"
 )
 
 type PlinkoService struct {
@@ -25,48 +31,14 @@ func NewPlinkoService() *PlinkoService {
 	}
 }
 
-// Lógica del juego
-func ejecutarPlinko(monto float64) dto.PlinkoResponseDTO {
-	const niveles = 8
-	const centro = 4
-
-	// Crear generador local con semilla única
-	source := rand.NewSource(time.Now().UnixNano())
-	r := rand.New(source)
-
-	// Posición inicial
-	pos := centro
-
-	// Simular rebotes
-	for i := 0; i < niveles; i++ {
-		direccion := r.Intn(2) // 0 = izquierda, 1 = derecha
-		if direccion == 0 && pos > 0 {
-			pos--
-		} else if direccion == 1 && pos < 8 {
-			pos++
-		}
-	}
-
-	// Multiplicadores por posición
-	multiplicadores := []float64{0.5, 0.8, 1.0, 1.4, 3.0, 1.4, 1.0, 0.8, 0.5}
-
-	multiplicador := multiplicadores[pos]
-	ganancia := monto * multiplicador
-
-	return dto.PlinkoResponseDTO{
-		PosicionFinal: pos,
-		Multiplicador: multiplicador,
-		Ganancia:      ganancia,
-	}
-}
-
 func (plinkoService *PlinkoService) Jugar(usuarioID uint, monto float64) (dto.PlinkoResponseDTO, error) {
 	usuario, err := plinkoService.validarJugada(usuarioID, monto)
 	if err != nil {
 		return dto.PlinkoResponseDTO{}, err
 	}
 
-	resultado := ejecutarPlinko(monto)
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+	resultado := EjecutarPlinko(monto, r)
 
 	if err := plinkoService.procesarResultado(usuario, monto, resultado); err != nil {
 		return dto.PlinkoResponseDTO{}, err
@@ -100,7 +72,7 @@ func (plinkoService *PlinkoService) validarJugada(usuarioID uint, monto float64)
 
 func (plinkoService *PlinkoService) procesarResultado(usuario *models.Usuario, monto float64, resultado dto.PlinkoResponseDTO) error {
 	// Registrar transacción de apuesta
-	if err := plinkoService.registrarTransaccion(usuario.ID, "apuesta", monto); err != nil {
+	if err := plinkoService.registrarTransaccion(usuario.ID, TipoTransaccionApuesta, monto); err != nil {
 		return err
 	}
 
@@ -111,7 +83,7 @@ func (plinkoService *PlinkoService) procesarResultado(usuario *models.Usuario, m
 	}
 
 	// Registrar transacción de ganancia
-	if err := plinkoService.registrarTransaccion(usuario.ID, "ganancia", resultado.Ganancia); err != nil {
+	if err := plinkoService.registrarTransaccion(usuario.ID, TipoTransaccionGanancia, resultado.Ganancia); err != nil {
 		return err
 	}
 
@@ -119,12 +91,18 @@ func (plinkoService *PlinkoService) procesarResultado(usuario *models.Usuario, m
 }
 
 func (plinkoService *PlinkoService) registrarJugada(usuarioID uint, monto float64, resultado dto.PlinkoResponseDTO) error {
+	trayectoJSON, err := json.Marshal(resultado.Trayecto)
+	if err != nil {
+		return err
+	}
+
 	jugada := &models.JugadaPlinko{
 		UsuarioID:     usuarioID,
 		MontoApostado: monto,
 		Multiplicador: resultado.Multiplicador,
 		Ganancia:      resultado.Ganancia,
 		PosicionFinal: resultado.PosicionFinal,
+		Trayecto:      string(trayectoJSON),
 		Fecha:         time.Now(),
 	}
 	return plinkoService.jugadaRepository.Crear(jugada)
