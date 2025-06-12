@@ -1,28 +1,26 @@
 package buscaminas
 
 import (
-	"math/rand"
-	"time"
+    "math/rand"
+    "time"
 )
 
-// GenerarMinas coloca minas aleatorias en el tablero, sin duplicados
 func (t *Tablero) GenerarMinas(cantidad int) {
-	rand.Seed(time.Now().UnixNano())
+    rand.Seed(time.Now().UnixNano())
 
-	totalCeldas := t.Filas * t.Columnas
-	if cantidad > totalCeldas {
-		cantidad = totalCeldas
-	}
+    total := t.Filas * t.Columnas
+    if cantidad > total {
+        cantidad = total
+    }
 
-	posiciones := make(map[int]bool)
+    posiciones := make(map[int]bool)
 
-	for len(posiciones) < cantidad {
-		index := rand.Intn(totalCeldas)
-		if !posiciones[index] {
-			posiciones[index] = true
-			fila := index / t.Columnas
-			col := index % t.Columnas
-			t.Celdas[fila][col].TieneMina = true
-		}
-	}
+    for len(posiciones) < cantidad {
+        index := rand.Intn(total)
+        if !posiciones[index] {
+            posiciones[index] = true
+            celda := &t.Celdas[index]
+            celda.TieneMina = true
+        }
+    }
 }

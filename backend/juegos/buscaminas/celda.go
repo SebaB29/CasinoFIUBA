@@ -1,8 +1,8 @@
 package buscaminas
 
 type Celda struct {
-	Abierta   bool
-	TieneMina     bool
-	Marcada       bool
-	MinasVecinas int
+    X         int  `json:"x"`
+    Y         int  `json:"y"`
+    Abierta   bool `json:"abierta"`
+    TieneMina bool `json:"-"`
 }
