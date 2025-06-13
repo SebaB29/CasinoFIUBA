@@ -30,6 +30,10 @@ func NewRuletaService() *RuletaService {
 }
 
 func (ruletaService *RuletaService) Jugar(usuarioID uint, jugada dto.RuletaRequestDTO) (dto.RuletaResponseDTO, error) {
+	if err := ValidarApuesta(jugada); err != nil {
+		return dto.RuletaResponseDTO{}, err
+	}
+
 	usuario, err := ruletaService.validarJugada(usuarioID, jugada.Monto)
 	if err != nil {
 		return dto.RuletaResponseDTO{}, err
