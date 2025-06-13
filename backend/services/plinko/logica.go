@@ -1,4 +1,4 @@
-package services
+package plinko
 
 import (
 	dto "casino/dto/juegos"
