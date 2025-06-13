@@ -2,19 +2,19 @@ package controllers
 
 import (
 	dto "casino/dto/juegos"
-	services "casino/services/ruleta"
+	ruleta "casino/services/ruleta"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 )
 
 type RuletaController struct {
-	service *services.RuletaService
+	ruletaService *ruleta.RuletaService
 }
 
 func NewRuletaController() *RuletaController {
 	return &RuletaController{
-		service: services.NewRuletaService(),
+		ruletaService: ruleta.NewRuletaService(),
 	}
 }
 
@@ -26,7 +26,7 @@ func (ctrl *RuletaController) Jugar(ctx *gin.Context) {
 	}
 
 	userID := ctx.GetUint("userID")
-	resultado, err := ctrl.service.Jugar(userID, request)
+	resultado, err := ctrl.ruletaService.Jugar(userID, request)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return

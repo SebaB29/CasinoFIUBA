@@ -1,4 +1,4 @@
-package services
+package ruleta
 
 import (
 	"casino/db"
@@ -30,11 +30,7 @@ func NewRuletaService() *RuletaService {
 }
 
 func (ruletaService *RuletaService) Jugar(usuarioID uint, jugada dto.RuletaRequestDTO) (dto.RuletaResponseDTO, error) {
-	if err := ValidarApuesta(jugada); err != nil {
-		return dto.RuletaResponseDTO{}, err
-	}
-
-	usuario, err := ruletaService.validarJugada(usuarioID, jugada.Monto)
+	usuario, err := ruletaService.ValidarApuesta(usuarioID, jugada)
 	if err != nil {
 		return dto.RuletaResponseDTO{}, err
 	}
@@ -52,19 +48,23 @@ func (ruletaService *RuletaService) Jugar(usuarioID uint, jugada dto.RuletaReque
 	return resultado, nil
 }
 
-func (ruletaService *RuletaService) validarJugada(usuarioID uint, monto float64) (*models.Usuario, error) {
+func (ruletaService *RuletaService) ValidarApuesta(usuarioID uint, jugada dto.RuletaRequestDTO) (*models.Usuario, error) {
 	const MontoMinimo = 1.0
-
-	if monto < MontoMinimo {
-		return nil, errores.ErrMontoInsuficiente
-	}
 
 	usuario, err := ruletaService.usuarioRepository.ObtenerPorID(usuarioID)
 	if err != nil || usuario == nil {
 		return nil, errores.ErrUsuarioNoEncontrado
 	}
 
-	if usuario.Saldo < monto {
+	if err := ValidarJugada(jugada); err != nil {
+		return nil, err
+	}
+
+	if jugada.Monto < MontoMinimo {
+		return nil, errores.ErrMontoInsuficiente
+	}
+
+	if usuario.Saldo < jugada.Monto {
 		return nil, errores.ErrSaldoInsuficiente
 	}
 
