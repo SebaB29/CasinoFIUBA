@@ -27,10 +27,21 @@ func (ctrl *RuletaController) Jugar(ctx *gin.Context) {
 
 	userID := ctx.GetUint("userID")
 
-	if err := ctrl.ruletaService.Jugar(userID, jugada); err != nil {
+	resultadoChannel, err := ctrl.ruletaService.Jugar(userID, jugada)
+	if err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	ctx.JSON(http.StatusAccepted, gin.H{"mensaje": "Apuesta recibida y en proceso. Esperá la ruleta..."})
+	resultado := <-resultadoChannel
+
+	respuesta := dto.RuletaResponseDTO{
+		Mensaje:       "La ruleta ha girado",
+		NumeroGanador: resultado.NumeroGanador.Valor,
+		ColorGanador:  resultado.NumeroGanador.Color,
+		MontoApostado: resultado.MontoApostado,
+		Ganancia:      resultado.Ganancia,
+	}
+
+	ctx.JSON(http.StatusOK, respuesta)
 }

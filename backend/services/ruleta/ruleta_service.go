@@ -25,20 +25,21 @@ func NewRuletaService() *RuletaService {
 	}
 }
 
-func (ruletaService *RuletaService) Jugar(usuarioID uint, jugada dto.RuletaRequestDTO) error {
+func (ruletaService *RuletaService) Jugar(usuarioID uint, jugada dto.RuletaRequestDTO) (chan ResultadoRuleta, error) {
 	usuario, err := ruletaService.usuarioRepository.ObtenerPorID(usuarioID)
 	if err != nil || usuario == nil {
-		return errores.ErrUsuarioNoEncontrado
+		return nil, errores.ErrUsuarioNoEncontrado
 	}
 
 	// La función se encuentra implementada en logica_negocio.go
 	if err := ruletaService.ValidarApuesta(usuario, jugada); err != nil {
-		return err
+		return nil, err
 	}
 
-	ruletaService.iniciarTemporizador(usuarioID, jugada)
+	resultadoChannel := make(chan ResultadoRuleta, 1) // Canal con buffer de 1 para evitar bloqueo
+	ruletaService.iniciarTemporizador(usuarioID, jugada, resultadoChannel)
 
-	return nil
+	return resultadoChannel, nil
 }
 
 func (ruletaService *RuletaService) EjecutarRuleta() {
@@ -81,10 +82,13 @@ func (ruletaService *RuletaService) EjecutarRuleta() {
 		if err := ruletaService.registrarJugada(usuarioID, jugadaDeUsuario, resultado); err != nil {
 			continue
 		}
+
+		jugada.Resultado <- resultado
+		close(jugada.Resultado)
 	}
 }
 
-func (ruletaService *RuletaService) iniciarTemporizador(usuarioID uint, jugada dto.RuletaRequestDTO) {
+func (ruletaService *RuletaService) iniciarTemporizador(usuarioID uint, jugada dto.RuletaRequestDTO, resultadoChannel chan ResultadoRuleta) {
 	ruletaActual := &ruletaService.ruletaManager.JuegoActual
 
 	ruletaActual.Mutex.Lock()
@@ -97,6 +101,7 @@ func (ruletaService *RuletaService) iniciarTemporizador(usuarioID uint, jugada d
 	ruletaActual.Jugadas = append(ruletaActual.Jugadas, JugadaConUsuario{
 		Apuesta:   jugada,
 		UsuarioID: usuarioID,
+		Resultado: resultadoChannel,
 	})
 	ruletaActual.Mutex.Unlock()
 

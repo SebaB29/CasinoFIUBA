@@ -18,6 +18,7 @@ type RuletaEnJuego struct {
 type JugadaConUsuario struct {
 	UsuarioID uint
 	Apuesta   dto.RuletaRequestDTO
+	Resultado chan ResultadoRuleta // Canal para enviar el resultado
 }
 
 type ResultadoRuleta struct {
