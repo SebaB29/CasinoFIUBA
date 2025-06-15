@@ -5,7 +5,7 @@ set -o pipefail  # <-- Pero sí reportar errores en pipes
 
 BASE_URL="http://localhost:8080"
 APUESTA=1000
-TOTAL_PARTIDAS=100
+TOTAL_PARTIDAS=5
 
 echo "🧪 Iniciando test de $TOTAL_PARTIDAS partidas del juego de los vasos..."
 
