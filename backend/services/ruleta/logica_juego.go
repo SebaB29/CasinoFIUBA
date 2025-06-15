@@ -6,26 +6,6 @@ import (
 	"time"
 )
 
-func EjecutarRuleta(jugada dto.RuletaRequestDTO) dto.RuletaResponseDTO {
-	numeroGanador := obtenerNumeroGanador()
-	multiplicador := calcularMultiplicador(jugada, numeroGanador)
-	ganancia := jugada.Monto * multiplicador
-
-	return dto.RuletaResponseDTO{
-		MontoApostado: jugada.Monto,
-		TipoApuesta:   jugada.TipoApuesta,
-		Numeros:       jugada.Numeros,
-		Docena:        jugada.Docena,
-		Color:         jugada.Color,
-		Paridad:       jugada.Paridad,
-		AltoBajo:      jugada.AltoBajo,
-		NumeroGanador: numeroGanador.Valor,
-		ColorGanador:  numeroGanador.Color,
-		Multiplicador: multiplicador,
-		Ganancia:      ganancia,
-	}
-}
-
 func obtenerNumeroGanador() NumeroRuleta {
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 	numeroGanador := r.Intn(CantidadNumerosRuleta)

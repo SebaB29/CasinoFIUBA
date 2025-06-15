@@ -7,14 +7,10 @@ import (
 	"casino/models"
 	"casino/repositories"
 	repositoriesJuegos "casino/repositories/juegos"
+	"casino/utils"
 	"encoding/json"
 	"math/rand"
 	"time"
-)
-
-const (
-	TipoTransaccionApuesta  = "apuesta"
-	TipoTransaccionGanancia = "ganancia"
 )
 
 type PlinkoService struct {
@@ -72,7 +68,7 @@ func (plinkoService *PlinkoService) validarJugada(usuarioID uint, monto float64)
 
 func (plinkoService *PlinkoService) procesarResultado(usuario *models.Usuario, monto float64, resultado dto.PlinkoResponseDTO) error {
 	// Registrar transacción de apuesta
-	if err := plinkoService.registrarTransaccion(usuario.ID, TipoTransaccionApuesta, monto); err != nil {
+	if err := plinkoService.registrarTransaccion(usuario.ID, utils.TipoTransaccionApuesta, monto); err != nil {
 		return err
 	}
 
@@ -83,7 +79,7 @@ func (plinkoService *PlinkoService) procesarResultado(usuario *models.Usuario, m
 	}
 
 	// Registrar transacción de ganancia
-	if err := plinkoService.registrarTransaccion(usuario.ID, TipoTransaccionGanancia, resultado.Ganancia); err != nil {
+	if err := plinkoService.registrarTransaccion(usuario.ID, utils.TipoTransaccionGanancia, resultado.Ganancia); err != nil {
 		return err
 	}
 

@@ -4,18 +4,13 @@ import (
 	"casino/db"
 	dto "casino/dto/juegos"
 	"casino/errores"
-	"casino/models"
 	"casino/repositories"
 	repositoriesJuegos "casino/repositories/juegos"
 	"time"
 )
 
-const (
-	TipoTransaccionApuesta  = "apuesta"
-	TipoTransaccionGanancia = "ganancia"
-)
-
 type RuletaService struct {
+	ruletaManager         *RuletaManager
 	usuarioRepository     repositories.UsuarioRepositoryInterface
 	jugadaRepository      repositoriesJuegos.JugadaRuletaRepositoryInterface
 	transaccionRepository repositories.TransaccionRepositoryInterface
@@ -23,100 +18,92 @@ type RuletaService struct {
 
 func NewRuletaService() *RuletaService {
 	return &RuletaService{
+		ruletaManager:         &RuletaManager{},
 		usuarioRepository:     repositories.NewUsuarioRepository(db.DB),
 		jugadaRepository:      repositoriesJuegos.NewJugadaRuletaRepository(db.DB),
 		transaccionRepository: repositories.NewTransaccionRepository(db.DB),
 	}
 }
 
-func (ruletaService *RuletaService) Jugar(usuarioID uint, jugada dto.RuletaRequestDTO) (dto.RuletaResponseDTO, error) {
-	usuario, err := ruletaService.ValidarApuesta(usuarioID, jugada)
-	if err != nil {
-		return dto.RuletaResponseDTO{}, err
-	}
-
-	resultado := EjecutarRuleta(jugada)
-
-	if err := ruletaService.procesarResultado(usuario, resultado); err != nil {
-		return dto.RuletaResponseDTO{}, err
-	}
-
-	if err := ruletaService.registrarJugada(usuario.ID, jugada, resultado); err != nil {
-		return dto.RuletaResponseDTO{}, err
-	}
-
-	return resultado, nil
-}
-
-func (ruletaService *RuletaService) ValidarApuesta(usuarioID uint, jugada dto.RuletaRequestDTO) (*models.Usuario, error) {
-	const MontoMinimo = 1.0
-
+func (ruletaService *RuletaService) Jugar(usuarioID uint, jugada dto.RuletaRequestDTO) error {
 	usuario, err := ruletaService.usuarioRepository.ObtenerPorID(usuarioID)
 	if err != nil || usuario == nil {
-		return nil, errores.ErrUsuarioNoEncontrado
+		return errores.ErrUsuarioNoEncontrado
 	}
 
-	if err := ValidarJugada(jugada); err != nil {
-		return nil, err
-	}
-
-	if jugada.Monto < MontoMinimo {
-		return nil, errores.ErrMontoInsuficiente
-	}
-
-	if usuario.Saldo < jugada.Monto {
-		return nil, errores.ErrSaldoInsuficiente
-	}
-
-	return usuario, nil
-}
-
-func (ruletaService *RuletaService) procesarResultado(usuario *models.Usuario, resultado dto.RuletaResponseDTO) error {
-	// Registrar transacción de apuesta
-	if err := ruletaService.registrarTransaccion(usuario.ID, TipoTransaccionApuesta, resultado.MontoApostado); err != nil {
+	// La función se encuentra implementada en logica_negocio.go
+	if err := ruletaService.ValidarApuesta(usuario, jugada); err != nil {
 		return err
 	}
 
-	// Actualizar saldo
-	usuario.Saldo = usuario.Saldo - resultado.MontoApostado + resultado.Ganancia
-	if err := ruletaService.usuarioRepository.Actualizar(usuario); err != nil {
-		return err
-	}
-
-	// Registrar transacción de ganancia
-	if resultado.Ganancia > 0 {
-		if err := ruletaService.registrarTransaccion(usuario.ID, TipoTransaccionGanancia, resultado.Ganancia); err != nil {
-			return err
-		}
-	}
+	ruletaService.iniciarTemporizador(usuarioID, jugada)
 
 	return nil
 }
 
-func (ruletaService *RuletaService) registrarJugada(usuarioID uint, jugadaInicial dto.RuletaRequestDTO, resultado dto.RuletaResponseDTO) error {
-	jugada := &models.JugadaRuleta{
-		UsuarioID:     usuarioID,
-		MontoApostado: jugadaInicial.Monto,
-		Ganancia:      resultado.Ganancia,
-		TipoApuesta:   jugadaInicial.TipoApuesta,
-		Numeros:       models.IntSlice(jugadaInicial.Numeros),
-		Docena:        jugadaInicial.Docena,
-		Color:         jugadaInicial.Color,
-		Paridad:       jugadaInicial.Paridad,
-		AltoBajo:      jugadaInicial.AltoBajo,
-		NumeroGanador: resultado.NumeroGanador,
-		ColorGanador:  resultado.ColorGanador,
-		Fecha:         time.Now(),
+func (ruletaService *RuletaService) EjecutarRuleta() {
+	ruletaActual := &ruletaService.ruletaManager.JuegoActual
+
+	ruletaActual.Mutex.Lock()
+	jugadas := ruletaActual.Jugadas
+
+	// Reinicio las Jugadas y Timer para la proxima ronda
+	ruletaActual.Jugadas = nil
+	ruletaActual.TimerActivo = false
+
+	ruletaActual.Mutex.Unlock()
+
+	// La función se encuentra implementada en logica_juego.go
+	numeroGanador := obtenerNumeroGanador()
+
+	for _, jugada := range jugadas {
+		usuarioID := jugada.UsuarioID
+		usuario, err := ruletaService.usuarioRepository.ObtenerPorID(usuarioID)
+		if err != nil || usuario == nil {
+			continue
+		}
+
+		jugadaDeUsuario := jugada.Apuesta
+
+		// La función se encuentra implementada en logica_juego.go
+		multiplicador := calcularMultiplicador(jugadaDeUsuario, numeroGanador)
+
+		resultado := ResultadoRuleta{
+			MontoApostado: jugadaDeUsuario.Monto,
+			Ganancia:      jugadaDeUsuario.Monto * multiplicador,
+			NumeroGanador: numeroGanador,
+		}
+
+		if err := ruletaService.procesarResultado(usuario, resultado); err != nil {
+			continue
+		}
+
+		if err := ruletaService.registrarJugada(usuarioID, jugadaDeUsuario, resultado); err != nil {
+			continue
+		}
 	}
-	return ruletaService.jugadaRepository.Crear(jugada)
 }
 
-func (ruletaService *RuletaService) registrarTransaccion(usuarioID uint, tipoTransaccion string, monto float64) error {
-	transaccion := &models.Transaccion{
-		UsuarioID: usuarioID,
-		Tipo:      tipoTransaccion,
-		Monto:     monto,
+func (ruletaService *RuletaService) iniciarTemporizador(usuarioID uint, jugada dto.RuletaRequestDTO) {
+	ruletaActual := &ruletaService.ruletaManager.JuegoActual
+
+	ruletaActual.Mutex.Lock()
+
+	timerActivo := ruletaActual.TimerActivo
+	if !timerActivo {
+		ruletaActual.TimerActivo = true
 	}
 
-	return ruletaService.transaccionRepository.Crear(transaccion)
+	ruletaActual.Jugadas = append(ruletaActual.Jugadas, JugadaConUsuario{
+		Apuesta:   jugada,
+		UsuarioID: usuarioID,
+	})
+	ruletaActual.Mutex.Unlock()
+
+	if !timerActivo {
+		go func() {
+			time.Sleep(15 * time.Second)
+			ruletaService.EjecutarRuleta()
+		}()
+	}
 }
