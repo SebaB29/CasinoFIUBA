@@ -3,7 +3,7 @@ package controllers
 import (
 	"casino/db"
 	dto "casino/dto/juegos"
-	"casino/juegos/vasos"
+	"casino/services/juegos/vasos"
 	"casino/models"
 	repo "casino/repositories/juegos"
 	"github.com/gin-gonic/gin"

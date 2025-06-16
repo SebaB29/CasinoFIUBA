@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"casino/config"
 	"casino/db"
-	"casino/juegos/buscaminas"
 	"casino/models"
+	"casino/services/juegos/buscaminas"
 	repositories "casino/repositories/juegos"
 	"io"
 	"log"
@@ -32,17 +32,17 @@ type RetirarseRequest struct {
 func CrearPartidaBuscaminas(c *gin.Context) {
 	var req NuevaPartidaRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		log.Println("Error de request al crear partida:", err)
+		log.Println("❌ Error de request al crear partida:", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
 	userID := c.GetUint("userID")
-	log.Printf("🛠️ Intentando crear nueva partida - UserID: %d, Minas: %d, Apuesta: %.2f", userID, req.Minas, req.Apuesta)
+	log.Printf("🛠️ Creando nueva partida (Usuario %d) - Minas: %d | Apuesta: %.2f", userID, req.Minas, req.Apuesta)
 
 	partida, err := buscaminas.CrearPartida(5, 5, req.Minas, req.Apuesta)
 	if err != nil {
-		log.Println("❌ Error al crear partida:", err)
+		log.Println("❌ Error al crear partida lógica:", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -57,12 +57,12 @@ func CrearPartidaBuscaminas(c *gin.Context) {
 	}
 
 	if err := repo.Crear(partidaDB); err != nil {
-		log.Println("❌ Error al guardar partida en base de datos:", err)
+		log.Println("❌ Error al guardar partida en DB:", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "No se pudo guardar la partida"})
 		return
 	}
 
-	log.Printf("✅ Partida creada correctamente (ID: %d) para el usuario %d", partidaDB.ID, userID)
+	log.Printf("✅ Partida creada correctamente (ID %d)", partidaDB.ID)
 
 	c.JSON(http.StatusCreated, gin.H{
 		"id_partida":      partidaDB.ID,
@@ -74,18 +74,18 @@ func CrearPartidaBuscaminas(c *gin.Context) {
 
 func AbrirCeldaBuscaminas(c *gin.Context) {
 	rawData, _ := io.ReadAll(c.Request.Body)
-	log.Println("📦 Datos crudos recibidos en /buscaminas/abrir:", string(rawData))
+	log.Println("📦 Body recibido en /abrir:", string(rawData))
 	c.Request.Body = io.NopCloser(bytes.NewBuffer(rawData))
 
 	var req AbrirCeldaRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		log.Println("🔴 Error de request al abrir celda:", err)
+		log.Println("🔴 Error al bindear:", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
 	userID := c.GetUint("userID")
-	log.Printf("🟢 Usuario %d intenta abrir celda (%d, %d) en partida %d", userID, *req.X, *req.Y, req.IDPartida)
+	log.Printf("👆 Usuario %d intenta abrir celda (%d,%d) en partida %d", userID, *req.X, *req.Y, req.IDPartida)
 
 	var partidaDB models.PartidaBuscaminas
 	if err := db.DB.First(&partidaDB, req.IDPartida).Error; err != nil {
@@ -94,26 +94,24 @@ func AbrirCeldaBuscaminas(c *gin.Context) {
 		return
 	}
 
-	partida, err := buscaminas.CrearPartida(5, 5, partidaDB.CantidadMinas, partidaDB.MontoApostado)
+	partida, err := reconstruirPartida(&partidaDB)
 	if err != nil {
 		log.Println("❌ Error reconstruyendo partida:", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error reconstruyendo la partida"})
 		return
 	}
-	partida.CeldasAbiertas = partidaDB.CeldasAbiertas
 
 	err = partida.AbrirCelda(*req.X, *req.Y)
 	if err != nil {
-		log.Println("🟠 Resultado: celda con mina o inválida:", err)
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
+		// Pisar una mina u otro error del juego es 200 OK
+		log.Println("💥 Jugada válida - celda con mina u otra condición:", err)
 	}
 
 	partidaDB.Estado = string(partida.Estado)
 	partidaDB.CeldasAbiertas = partida.CeldasAbiertas
 	db.DB.Save(&partidaDB)
 
-	log.Printf("✅ Celda abierta - Celdas abiertas: %d | Estado: %s", partida.CeldasAbiertas, partida.Estado)
+	log.Printf("🟢 Resultado - Estado: %s | Celdas abiertas: %d", partida.Estado, partida.CeldasAbiertas)
 
 	responderPartida(c, partida, &partidaDB, http.StatusOK)
 }
@@ -121,13 +119,13 @@ func AbrirCeldaBuscaminas(c *gin.Context) {
 func RetirarseBuscaminas(c *gin.Context) {
 	var req RetirarseRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		log.Println("❌ Error de request al retirarse:", err)
+		log.Println("❌ Error en retiro:", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
 	userID := c.GetUint("userID")
-	log.Printf("📤 Usuario %d se retira de la partida %d", userID, req.IDPartida)
+	log.Printf("📤 Usuario %d intenta retirarse de partida %d", userID, req.IDPartida)
 
 	var partidaDB models.PartidaBuscaminas
 	if err := db.DB.First(&partidaDB, req.IDPartida).Error; err != nil {
@@ -136,13 +134,21 @@ func RetirarseBuscaminas(c *gin.Context) {
 		return
 	}
 
-	partida, err := buscaminas.CrearPartida(5, 5, partidaDB.CantidadMinas, partidaDB.MontoApostado)
+	switch partidaDB.Estado {
+	case "ganada":
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Ya ganaste, no podés retirarte"})
+		return
+	case "perdida":
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Ya perdiste, no podés retirarte"})
+		return
+	}
+
+	partida, err := reconstruirPartida(&partidaDB)
 	if err != nil {
-		log.Println("❌ Error reconstruyendo partida:", err)
+		log.Println("❌ Error reconstruyendo:", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error reconstruyendo la partida"})
 		return
 	}
-	partida.CeldasAbiertas = partidaDB.CeldasAbiertas
 
 	premio, err := partida.Retirarse()
 	if err != nil {
@@ -154,7 +160,7 @@ func RetirarseBuscaminas(c *gin.Context) {
 	partidaDB.Estado = string(partida.Estado)
 	db.DB.Save(&partidaDB)
 
-	log.Printf("💰 Usuario %d se retiró con premio: %.2f", userID, premio)
+	log.Printf("💰 Usuario %d se retiró y ganó: %.2f", userID, premio)
 
 	c.JSON(http.StatusOK, gin.H{
 		"mensaje": "Te retiraste exitosamente",
@@ -163,7 +169,22 @@ func RetirarseBuscaminas(c *gin.Context) {
 	})
 }
 
-// Devuelve solo las celdas visibles al usuario
+// Helpers
+
+func reconstruirPartida(partidaDB *models.PartidaBuscaminas) (*buscaminas.Partida, error) {
+	partida, err := buscaminas.CrearPartida(5, 5, partidaDB.CantidadMinas, partidaDB.MontoApostado)
+	if err != nil {
+		return nil, err
+	}
+	partida.CeldasAbiertas = partidaDB.CeldasAbiertas
+	partida.Estado = buscaminas.EstadoPartida(partidaDB.Estado)
+	return partida, nil
+}
+
+func esFinalizada(estado string) bool {
+	return estado == "ganada" || estado == "perdida" || estado == "retirada"
+}
+
 func ocultarMinas(t *buscaminas.Tablero) []map[string]interface{} {
 	resultado := make([]map[string]interface{}, 0, len(t.Celdas))
 	for _, celda := range t.Celdas {
@@ -176,7 +197,6 @@ func ocultarMinas(t *buscaminas.Tablero) []map[string]interface{} {
 	return resultado
 }
 
-// Factor común para devolver estado de partida + tablero oculto
 func responderPartida(c *gin.Context, partida *buscaminas.Partida, partidaDB *models.PartidaBuscaminas, status int) {
 	c.JSON(status, gin.H{
 		"estado":          partida.Estado,

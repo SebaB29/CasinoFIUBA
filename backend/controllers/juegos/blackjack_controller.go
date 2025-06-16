@@ -3,7 +3,7 @@ package controllers
 import (
     "casino/db"
     dto "casino/dto/juegos"
-    "casino/juegos/blackjack"
+    "casino/services/juegos/blackjack"
     "casino/models"
     repo "casino/repositories/juegos"
     "net/http"
