@@ -1,9 +1,8 @@
 package controllers
 
 import (
-	"casino/services/ruleta"
+	"casino/services/juegos/ruleta"
 	ws "casino/websocket/juegos"
-
 	"net/http"
 
 	"github.com/gin-gonic/gin"

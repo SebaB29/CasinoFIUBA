@@ -13,6 +13,11 @@ import (
 	"time"
 )
 
+const (
+	TipoTransaccionApuesta  = "apuesta"
+	TipoTransaccionGanancia = "ganancia"
+)
+
 type PlinkoService struct {
 	usuarioRepository     repositories.UsuarioRepositoryInterface
 	jugadaRepository      repositoriesJuegos.JugadaPlinkoRepositoryInterface

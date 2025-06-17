@@ -2,19 +2,19 @@ package controllers
 
 import (
 	dto "casino/dto/juegos"
-	services "casino/services/plinko"
+	plinko "casino/services/juegos/plinko"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 )
 
 type PlinkoController struct {
-	service *services.PlinkoService
+	service *plinko.PlinkoService
 }
 
 func NewPlinkoController() *PlinkoController {
 	return &PlinkoController{
-		service: services.NewPlinkoService(),
+		service: plinko.NewPlinkoService(),
 	}
 }
 

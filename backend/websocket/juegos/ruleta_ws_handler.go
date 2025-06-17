@@ -2,7 +2,7 @@ package websocket
 
 import (
 	dto "casino/dto/juegos"
-	"casino/services/ruleta"
+	ruleta "casino/services/juegos/ruleta"
 	protocolo "casino/websocket/protocols"
 	"encoding/json"
 
