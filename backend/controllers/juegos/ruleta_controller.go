@@ -19,29 +19,18 @@ func NewRuletaController() *RuletaController {
 }
 
 func (ctrl *RuletaController) Jugar(ctx *gin.Context) {
-	var jugada dto.RuletaRequestDTO
-	if err := ctx.ShouldBindJSON(&jugada); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Formato inválido"})
+	var request dto.RuletaRequestDTO
+	if err := ctx.ShouldBindJSON(&request); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Datos de apuesta inválidos"})
 		return
 	}
 
 	userID := ctx.GetUint("userID")
-
-	resultadoChannel, err := ctrl.ruletaService.Jugar(userID, jugada)
+	resultado, err := ctrl.ruletaService.Jugar(userID, request)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	resultado := <-resultadoChannel
-
-	respuesta := dto.RuletaResponseDTO{
-		Mensaje:       "La ruleta ha girado",
-		NumeroGanador: resultado.NumeroGanador.Valor,
-		ColorGanador:  resultado.NumeroGanador.Color,
-		MontoApostado: resultado.MontoApostado,
-		Ganancia:      resultado.Ganancia,
-	}
-
-	ctx.JSON(http.StatusOK, respuesta)
+	ctx.JSON(http.StatusOK, resultado)
 }
