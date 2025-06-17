@@ -14,5 +14,6 @@ func JuegosRoutes(rg *gin.RouterGroup) {
 	auth.Use(middleware.JWTAuthMiddleware())
 
 	auth.POST("/plinko", plinkoController.Jugar)
-	auth.POST("/ruleta", ruletaController.Jugar)
+	auth.GET("/ruleta", ruletaController.JugarWS)
+
 }
