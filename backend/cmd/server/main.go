@@ -4,12 +4,17 @@ import (
 	"casino/config"
 	"casino/db"
 	"casino/routes"
+	"math/rand"
 	"os"
+	"time"
 
 	_ "github.com/joho/godotenv/autoload"
 )
 
 func main() {
+	// Aleatoriedad global
+	rand.Seed(time.Now().UnixNano()) 
+
 	config.Load()
 	// Establece la conexion con la base de datos
 	db.ConectarDB()

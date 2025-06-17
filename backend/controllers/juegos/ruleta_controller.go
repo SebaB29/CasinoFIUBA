@@ -2,7 +2,7 @@ package controllers
 
 import (
 	dto "casino/dto/juegos"
-	ruleta "casino/services/ruleta"
+	ruleta "casino/services/juegos/ruleta"
 	"net/http"
 
 	"github.com/gin-gonic/gin"

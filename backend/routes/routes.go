@@ -21,7 +21,9 @@ func SetupRoutes() *gin.Engine {
 		UsuarioRoutes(v1)
 		TransaccionRoutes(v1)
 		BuscaminasRoutes(v1)
+		VasosRoutes(v1)
 		JuegosRoutes(v1)
+		BlackjackRoutes(v1)
 	}
 
 	return r

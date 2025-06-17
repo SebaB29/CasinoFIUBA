@@ -7,10 +7,7 @@ import (
 	"casino/models"
 	"casino/repositories"
 	repositoriesJuegos "casino/repositories/juegos"
-<<<<<<<< HEAD:backend/services/juegos/plinko/plinko_service.go
 	"casino/utils"
-========
->>>>>>>> main:backend/services/plinko/plinko_service.go
 	"encoding/json"
 	"math/rand"
 	"time"
@@ -76,11 +73,7 @@ func (plinkoService *PlinkoService) validarJugada(usuarioID uint, monto float64)
 
 func (plinkoService *PlinkoService) procesarResultado(usuario *models.Usuario, monto float64, resultado dto.PlinkoResponseDTO) error {
 	// Registrar transacción de apuesta
-<<<<<<<< HEAD:backend/services/juegos/plinko/plinko_service.go
 	if err := plinkoService.registrarTransaccion(usuario.ID, utils.TipoTransaccionApuesta, monto); err != nil {
-========
-	if err := plinkoService.registrarTransaccion(usuario.ID, TipoTransaccionApuesta, monto); err != nil {
->>>>>>>> main:backend/services/plinko/plinko_service.go
 		return err
 	}
 
@@ -91,11 +84,7 @@ func (plinkoService *PlinkoService) procesarResultado(usuario *models.Usuario, m
 	}
 
 	// Registrar transacción de ganancia
-<<<<<<<< HEAD:backend/services/juegos/plinko/plinko_service.go
 	if err := plinkoService.registrarTransaccion(usuario.ID, utils.TipoTransaccionGanancia, resultado.Ganancia); err != nil {
-========
-	if err := plinkoService.registrarTransaccion(usuario.ID, TipoTransaccionGanancia, resultado.Ganancia); err != nil {
->>>>>>>> main:backend/services/plinko/plinko_service.go
 		return err
 	}
 

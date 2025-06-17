@@ -61,9 +61,24 @@ func ConectarDB() {
 
 	if err := DB.AutoMigrate(&models.JugadaPlinko{}); err != nil {
 		log.Fatalf("Error al migrar la base de datos: %v", err)
+	} 
+	// Migrar modelo PartidaVasos (crea tabla si no existe)
+	if err := DB.AutoMigrate(&models.PartidaVasos{}); err != nil {
+		log.Fatalf("Error al migrar la base de datos: %v", err)
+	}
+	
+	// Migrar modelo PartidaBlackjack (crea tabla si no existe)
+	if err := DB.AutoMigrate(&models.PartidaBlackjack{}); err != nil {
+		log.Fatalf("Error al migrar la base de datos: %v", err)
+	}
+
+	// Migrar modelo JugadaRuleta (crea tabla si no existe)
+	if err := DB.AutoMigrate(&models.JugadaRuleta{}); err != nil {
+		log.Fatalf("Error al migrar la base de datos: %v", err)
 	}
 
 	if err := DB.AutoMigrate(&models.JugadaRuleta{}); err != nil {
 		log.Fatalf("Error al migrar la base de datos: %v", err)
 	}
 }
+
