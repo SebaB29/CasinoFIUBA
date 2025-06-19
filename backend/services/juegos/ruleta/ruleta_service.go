@@ -7,6 +7,8 @@ import (
 	"casino/repositories"
 	repositoriesJuegos "casino/repositories/juegos"
 	"time"
+
+	"github.com/gorilla/websocket"
 )
 
 type RuletaService struct {
@@ -18,14 +20,18 @@ type RuletaService struct {
 
 func NewRuletaService() *RuletaService {
 	return &RuletaService{
-		ruletaManager:         &RuletaManager{},
+		ruletaManager: &RuletaManager{
+			JuegoActual: RuletaEnJuego{
+				ConexionesWS: make(map[uint]*websocket.Conn),
+			},
+		},
 		usuarioRepository:     repositories.NewUsuarioRepository(db.DB),
 		jugadaRepository:      repositoriesJuegos.NewJugadaRuletaRepository(db.DB),
 		transaccionRepository: repositories.NewTransaccionRepository(db.DB),
 	}
 }
 
-func (ruletaService *RuletaService) Jugar(usuarioID uint, jugada dto.RuletaRequestDTO) (chan ResultadoRuleta, error) {
+func (ruletaService *RuletaService) Jugar(usuarioID uint, jugada dto.RuletaRequestDTO, conn *websocket.Conn) (chan ResultadoRuleta, error) {
 	usuario, err := ruletaService.usuarioRepository.ObtenerPorID(usuarioID)
 	if err != nil || usuario == nil {
 		return nil, errores.ErrUsuarioNoEncontrado
@@ -37,7 +43,7 @@ func (ruletaService *RuletaService) Jugar(usuarioID uint, jugada dto.RuletaReque
 	}
 
 	resultadoChannel := make(chan ResultadoRuleta, 1) // Canal con buffer de 1 para evitar bloqueo
-	ruletaService.iniciarTemporizador(usuarioID, jugada, resultadoChannel)
+	ruletaService.iniciarTemporizador(usuarioID, jugada, resultadoChannel, conn)
 
 	return resultadoChannel, nil
 }
@@ -53,6 +59,17 @@ func (ruletaService *RuletaService) EjecutarRuleta() {
 	ruletaActual.TimerActivo = false
 
 	ruletaActual.Mutex.Unlock()
+
+	for _, conn := range ruletaActual.ConexionesWS {
+		if conn != nil {
+			conn.WriteJSON(map[string]string{
+				"message": "¡No va más!",
+			})
+		}
+	}
+
+	// Simulamos que la ruleta gira por 5 segundos
+	time.Sleep(5 * time.Second)
 
 	// La función se encuentra implementada en logica_juego.go
 	numeroGanador := obtenerNumeroGanador()
@@ -88,7 +105,7 @@ func (ruletaService *RuletaService) EjecutarRuleta() {
 	}
 }
 
-func (ruletaService *RuletaService) iniciarTemporizador(usuarioID uint, jugada dto.RuletaRequestDTO, resultadoChannel chan ResultadoRuleta) {
+func (ruletaService *RuletaService) iniciarTemporizador(usuarioID uint, jugada dto.RuletaRequestDTO, resultadoChannel chan ResultadoRuleta, jugadaConexion *websocket.Conn) {
 	ruletaActual := &ruletaService.ruletaManager.JuegoActual
 
 	ruletaActual.Mutex.Lock()
@@ -98,6 +115,7 @@ func (ruletaService *RuletaService) iniciarTemporizador(usuarioID uint, jugada d
 		ruletaActual.TimerActivo = true
 	}
 
+	ruletaActual.ConexionesWS[usuarioID] = jugadaConexion
 	ruletaActual.Jugadas = append(ruletaActual.Jugadas, JugadaConUsuario{
 		Apuesta:   jugada,
 		UsuarioID: usuarioID,
