@@ -6,52 +6,91 @@ import (
 	"fmt"
 )
 
+var validadores = map[string]func(dto.RuletaRequestDTO) error{
+	"pleno":     validarPleno,
+	"dividida":  validarDividida,
+	"calle":     validarCalle,
+	"cuadro":    validarCuadro,
+	"docena":    validarDocena,
+	"color":     validarColor,
+	"paridad":   validarParidad,
+	"alto_bajo": validarAltoBajo,
+}
+
 func ValidarJugada(jugada dto.RuletaRequestDTO) error {
+	// Validaciones comunes previas
 	for _, numero := range jugada.Numeros {
 		if numero < NumeroMinimoRuleta || numero > NumeroMaximoRuleta {
 			return fmt.Errorf("%w: %d", errores.ErrNumeroInvalido, numero)
 		}
 	}
 
-	switch jugada.TipoApuesta {
-	case "pleno":
-		if len(jugada.Numeros) != CantidadNumerosPleno {
-			return fmt.Errorf("%w: se requiere un único número para apuesta plena", errores.ErrFormatoInvalido)
-		}
-	case "dividida":
-		if len(jugada.Numeros) != CantidadNumerosDividida || !sonAdyacentes(jugada.Numeros[0], jugada.Numeros[1]) {
-			return fmt.Errorf("%w: los números deben ser adyacentes para una dividida", errores.ErrFormatoInvalido)
-		}
-	case "calle":
-		if len(jugada.Numeros) != CantidadNumerosCalle || !esCalleValida(jugada.Numeros) {
-			return fmt.Errorf("%w: los números deben formar una calle válida", errores.ErrFormatoInvalido)
-		}
-	case "cuadro":
-		if len(jugada.Numeros) != CantidadNumerosCuadro || !esCuadroValido(jugada.Numeros) {
-			return fmt.Errorf("%w: los números deben formar un cuadro válido", errores.ErrFormatoInvalido)
-		}
-	case "docena":
-		if jugada.Docena < PrimeraDocena || jugada.Docena > TerceraDocena {
-			return fmt.Errorf("%w: docena debe estar entre 1 y 3", errores.ErrFormatoInvalido)
-		}
-	case "color":
-		if !ColoresValidos[jugada.Color] {
-			return fmt.Errorf("%w: debe ser 'rojo' o 'negro'", errores.ErrColorInvalido)
-		}
-	case "paridad":
-		if !ParidadesValidas[jugada.Paridad] {
-			return fmt.Errorf("%w: paridad debe ser 'par' o 'impar'", errores.ErrFormatoInvalido)
-		}
-	case "alto_bajo":
-		if !AltoBajoValidos[jugada.AltoBajo] {
-			return fmt.Errorf("%w: debe ser 'alto' o 'bajo'", errores.ErrFormatoInvalido)
-		}
-	default:
-		return fmt.Errorf("%w: tipo '%s'", errores.ErrApuestaInvalida, jugada.TipoApuesta)
+	if fn, ok := validadores[jugada.TipoApuesta]; ok {
+		return fn(jugada)
 	}
 
+	return fmt.Errorf("%w: tipo '%s'", errores.ErrApuestaInvalida, jugada.TipoApuesta)
+}
+
+// ----------- Validadores -----------
+
+func validarPleno(jugada dto.RuletaRequestDTO) error {
+	if len(jugada.Numeros) != CantidadNumerosPleno {
+		return fmt.Errorf("%w: se requiere un único número para apuesta plena", errores.ErrFormatoInvalido)
+	}
 	return nil
 }
+
+func validarDividida(jugada dto.RuletaRequestDTO) error {
+	if len(jugada.Numeros) != CantidadNumerosDividida || !sonAdyacentes(jugada.Numeros[0], jugada.Numeros[1]) {
+		return fmt.Errorf("%w: los números deben ser adyacentes para una dividida", errores.ErrFormatoInvalido)
+	}
+	return nil
+}
+
+func validarCalle(jugada dto.RuletaRequestDTO) error {
+	if len(jugada.Numeros) != CantidadNumerosCalle || !esCalleValida(jugada.Numeros) {
+		return fmt.Errorf("%w: los números deben formar una calle válida", errores.ErrFormatoInvalido)
+	}
+	return nil
+}
+
+func validarCuadro(jugada dto.RuletaRequestDTO) error {
+	if len(jugada.Numeros) != CantidadNumerosCuadro || !esCuadroValido(jugada.Numeros) {
+		return fmt.Errorf("%w: los números deben formar un cuadro válido", errores.ErrFormatoInvalido)
+	}
+	return nil
+}
+
+func validarDocena(jugada dto.RuletaRequestDTO) error {
+	if jugada.Docena < PrimeraDocena || jugada.Docena > TerceraDocena {
+		return fmt.Errorf("%w: docena debe estar entre 1 y 3", errores.ErrFormatoInvalido)
+	}
+	return nil
+}
+
+func validarColor(jugada dto.RuletaRequestDTO) error {
+	if !ColoresValidos[jugada.Color] {
+		return fmt.Errorf("%w: debe ser 'rojo' o 'negro'", errores.ErrColorInvalido)
+	}
+	return nil
+}
+
+func validarParidad(jugada dto.RuletaRequestDTO) error {
+	if !ParidadesValidas[jugada.Paridad] {
+		return fmt.Errorf("%w: paridad debe ser 'par' o 'impar'", errores.ErrFormatoInvalido)
+	}
+	return nil
+}
+
+func validarAltoBajo(jugada dto.RuletaRequestDTO) error {
+	if !AltoBajoValidos[jugada.AltoBajo] {
+		return fmt.Errorf("%w: debe ser 'alto' o 'bajo'", errores.ErrFormatoInvalido)
+	}
+	return nil
+}
+
+// ----------- Funciones Auxiliares -----------
 
 func abs(numero int) int {
 	if numero < 0 {

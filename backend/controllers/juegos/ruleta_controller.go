@@ -1,12 +1,19 @@
 package controllers
 
 import (
-	dto "casino/dto/juegos"
-	ruleta "casino/services/juegos/ruleta"
+	"casino/services/juegos/ruleta"
+	ws "casino/websocket/juegos"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/gorilla/websocket"
 )
+
+var upgrader = websocket.Upgrader{
+	CheckOrigin: func(request *http.Request) bool {
+		return true
+	},
+}
 
 type RuletaController struct {
 	ruletaService *ruleta.RuletaService
@@ -18,19 +25,14 @@ func NewRuletaController() *RuletaController {
 	}
 }
 
-func (ctrl *RuletaController) Jugar(ctx *gin.Context) {
-	var request dto.RuletaRequestDTO
-	if err := ctx.ShouldBindJSON(&request); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Datos de apuesta inválidos"})
+func (ctrl *RuletaController) JugarWS(ctx *gin.Context) {
+	conexion, err := upgrader.Upgrade(ctx.Writer, ctx.Request, nil)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "No se pudo establecer WebSocket"})
 		return
 	}
 
 	userID := ctx.GetUint("userID")
-	resultado, err := ctrl.ruletaService.Jugar(userID, request)
-	if err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
-	ctx.JSON(http.StatusOK, resultado)
+	handler := ws.NewRuletaSocketHandler(conexion, userID, ctrl.ruletaService)
+	handler.Manejar()
 }
