@@ -60,9 +60,11 @@ func (ruletaService *RuletaService) Jugar(usuarioID uint, jugada dto.RuletaReque
 	// Si no hay timer activo, lo arrancamos
 	if !ruletaActual.TimerActivo {
 		ruletaActual.TimerActivo = true
-		ruletaActual.Estado = EstadoGirando
 		go func() {
 			time.Sleep(15 * time.Second)
+			ruletaActual.Mutex.Lock()
+			ruletaActual.Estado = EstadoGirando
+			ruletaActual.Mutex.Unlock()
 			ruletaService.anunciarCierreApuestas(ruletaActual)
 			time.Sleep(5 * time.Second)
 			ruletaService.EjecutarRuleta()
