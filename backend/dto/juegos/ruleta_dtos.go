@@ -17,3 +17,17 @@ type RuletaResponseDTO struct {
 	MontoApostado float64 `json:"monto_apostado"`
 	Ganancia      float64 `json:"ganancia"`
 }
+
+type ResultadoIndividualDTO struct {
+	TipoApuesta   string      `json:"tipo_apuesta"`
+	MontoApostado float64     `json:"monto_apostado"`
+	Ganancia      float64     `json:"ganancia"`
+	Detalles      interface{} `json:"detalles"` // flexible según tipo
+}
+
+type RuletaResultadoUsuarioDTO struct {
+	Mensaje       string                   `json:"message"`
+	NumeroGanador int                      `json:"numero_ganador"`
+	Color         string                   `json:"color"`
+	Resultados    []ResultadoIndividualDTO `json:"resultados"`
+}

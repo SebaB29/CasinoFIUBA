@@ -6,6 +6,17 @@ import (
 	"time"
 )
 
+var calculadores = map[string]func(dto.RuletaRequestDTO, NumeroRuleta) float64{
+	"pleno":     calcularPleno,
+	"dividida":  calcularDividida,
+	"calle":     calcularCalle,
+	"cuadro":    calcularCuadro,
+	"docena":    calcularDocena,
+	"color":     calcularColor,
+	"paridad":   calcularParidad,
+	"alto_bajo": calcularAltoBajo,
+}
+
 func obtenerNumeroGanador() NumeroRuleta {
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 	numeroGanador := r.Intn(CantidadNumerosRuleta)
@@ -26,45 +37,105 @@ func obtenerNumeroGanador() NumeroRuleta {
 }
 
 func calcularMultiplicador(jugada dto.RuletaRequestDTO, numeroGanador NumeroRuleta) float64 {
+	if fn, ok := calculadores[jugada.TipoApuesta]; ok {
+		return fn(jugada, numeroGanador)
+	}
+	return SinGanancia
+}
+
+func extraerDetalles(jugada dto.RuletaRequestDTO) interface{} {
 	switch jugada.TipoApuesta {
-	case "pleno":
-		if contiene(jugada.Numeros, numeroGanador.Valor) {
-			return MultiplicadorPleno
-		}
-	case "dividida":
-		if contiene(jugada.Numeros, numeroGanador.Valor) {
-			return MultiplicadorDividida
-		}
-	case "calle":
-		if contiene(jugada.Numeros, numeroGanador.Valor) {
-			return MultiplicadorCalle
-		}
-	case "cuadro":
-		if contiene(jugada.Numeros, numeroGanador.Valor) {
-			return MultiplicadorCuadro
-		}
+	case "pleno", "dividida", "calle", "cuadro":
+		return map[string]interface{}{"numeros": jugada.Numeros}
 	case "docena":
-		if (jugada.Docena == PrimeraDocena && numeroGanador.Valor >= MinDocena1 && numeroGanador.Valor <= MaxDocena1) ||
-			(jugada.Docena == SegundaDocena && numeroGanador.Valor >= MinDocena2 && numeroGanador.Valor <= MaxDocena2) ||
-			(jugada.Docena == TerceraDocena && numeroGanador.Valor >= MinDocena3 && numeroGanador.Valor <= MaxDocena3) {
+		return map[string]interface{}{"docena": jugada.Docena}
+	case "color":
+		return map[string]interface{}{"color": jugada.Color}
+	case "paridad":
+		return map[string]interface{}{"paridad": jugada.Paridad}
+	case "alto_bajo":
+		return map[string]interface{}{"alto_bajo": jugada.AltoBajo}
+	default:
+		return nil
+	}
+}
+
+// ----------- Calculadores -----------
+
+func calcularPleno(jugada dto.RuletaRequestDTO, numeroGanador NumeroRuleta) float64 {
+	if contiene(jugada.Numeros, numeroGanador.Valor) {
+		return MultiplicadorPleno
+	}
+	return SinGanancia
+}
+
+func calcularDividida(jugada dto.RuletaRequestDTO, numeroGanador NumeroRuleta) float64 {
+	if contiene(jugada.Numeros, numeroGanador.Valor) {
+		return MultiplicadorDividida
+	}
+	return SinGanancia
+}
+
+func calcularCalle(jugada dto.RuletaRequestDTO, numeroGanador NumeroRuleta) float64 {
+	if contiene(jugada.Numeros, numeroGanador.Valor) {
+		return MultiplicadorCalle
+	}
+	return SinGanancia
+}
+
+func calcularCuadro(jugada dto.RuletaRequestDTO, numeroGanador NumeroRuleta) float64 {
+	if contiene(jugada.Numeros, numeroGanador.Valor) {
+		return MultiplicadorCuadro
+	}
+	return SinGanancia
+}
+
+func calcularDocena(jugada dto.RuletaRequestDTO, numeroGanador NumeroRuleta) float64 {
+	switch jugada.Docena {
+	case PrimeraDocena:
+		if numeroGanador.Valor >= MinDocena1 && numeroGanador.Valor <= MaxDocena1 {
 			return MultiplicadorDocena
 		}
-	case "color":
-		if jugada.Color == numeroGanador.Color {
-			return MultiplicadorSimple
+	case SegundaDocena:
+		if numeroGanador.Valor >= MinDocena2 && numeroGanador.Valor <= MaxDocena2 {
+			return MultiplicadorDocena
 		}
-	case "paridad":
-		if numeroGanador.Valor != 0 && ((jugada.Paridad == "par" && numeroGanador.Valor%2 == 0) || (jugada.Paridad == "impar" && numeroGanador.Valor%2 != 0)) {
-			return MultiplicadorSimple
-		}
-	case "alto_bajo":
-		if (jugada.AltoBajo == "alto" && numeroGanador.Valor >= MinAlto && numeroGanador.Valor <= MaxAlto) ||
-			(jugada.AltoBajo == "bajo" && numeroGanador.Valor >= MinBajo && numeroGanador.Valor <= MaxBajo) {
-			return MultiplicadorSimple
+	case TerceraDocena:
+		if numeroGanador.Valor >= MinDocena3 && numeroGanador.Valor <= MaxDocena3 {
+			return MultiplicadorDocena
 		}
 	}
 	return SinGanancia
 }
+
+func calcularColor(jugada dto.RuletaRequestDTO, numeroGanador NumeroRuleta) float64 {
+	if jugada.Color == numeroGanador.Color {
+		return MultiplicadorSimple
+	}
+	return SinGanancia
+}
+
+func calcularParidad(jugada dto.RuletaRequestDTO, numeroGanador NumeroRuleta) float64 {
+	if numeroGanador.Valor == 0 {
+		return SinGanancia
+	}
+	if (jugada.Paridad == "par" && numeroGanador.Valor%2 == 0) || (jugada.Paridad == "impar" && numeroGanador.Valor%2 != 0) {
+		return MultiplicadorSimple
+	}
+	return SinGanancia
+}
+
+func calcularAltoBajo(jugada dto.RuletaRequestDTO, numeroGanador NumeroRuleta) float64 {
+	if jugada.AltoBajo == "alto" && numeroGanador.Valor >= MinAlto && numeroGanador.Valor <= MaxAlto {
+		return MultiplicadorSimple
+	}
+	if jugada.AltoBajo == "bajo" && numeroGanador.Valor >= MinBajo && numeroGanador.Valor <= MaxBajo {
+		return MultiplicadorSimple
+	}
+	return SinGanancia
+}
+
+// ----------- Funciones Auxiliares -----------
 
 func contiene(numeros []int, objetivo int) bool {
 	for _, numero := range numeros {

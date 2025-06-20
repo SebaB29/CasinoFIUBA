@@ -7,22 +7,24 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-type RuletaManager struct {
-	JuegoActual RuletaEnJuego
-}
+type EstadoRuleta string
+
+const (
+	EstadoEsperandoApuestas EstadoRuleta = "esperando"
+	EstadoGirando           EstadoRuleta = "girando"
+)
 
 type RuletaEnJuego struct {
 	Jugadas      []JugadaConUsuario
-	Mutex        sync.Mutex
+	ConexionesWS map[uint]*websocket.Conn // Jugadores: ConexionesWS[UserID]
 	TimerActivo  bool
-	ConexionesWS map[uint]*websocket.Conn // NUEVO
+	Estado       EstadoRuleta
+	Mutex        sync.Mutex
 }
 
 type JugadaConUsuario struct {
 	UsuarioID uint
 	Apuesta   dto.RuletaRequestDTO
-	Resultado chan ResultadoRuleta // Canal para enviar el resultado
-	Conexion  *websocket.Conn
 }
 
 type ResultadoRuleta struct {

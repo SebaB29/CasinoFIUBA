@@ -57,22 +57,10 @@ func (handler *RuletaSocketHandler) procesarApuesta(data json.RawMessage) {
 		return
 	}
 
-	canal, err := handler.ruletaService.Jugar(handler.userID, datos, handler.conexion)
-	if err != nil {
+	if err := handler.ruletaService.Jugar(handler.userID, datos, handler.conexion); err != nil {
 		handler.conexion.WriteJSON(map[string]string{"error": err.Error()})
 		return
 	}
-
-	go func() {
-		resultado := <-canal
-		handler.conexion.WriteJSON(dto.RuletaResponseDTO{
-			Mensaje:       "La ruleta ha girado",
-			NumeroGanador: resultado.NumeroGanador.Valor,
-			ColorGanador:  resultado.NumeroGanador.Color,
-			MontoApostado: resultado.MontoApostado,
-			Ganancia:      resultado.Ganancia,
-		})
-	}()
 }
 
 func (handler *RuletaSocketHandler) desconectar() {
