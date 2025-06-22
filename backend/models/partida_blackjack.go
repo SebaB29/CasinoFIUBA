@@ -28,5 +28,7 @@ type PartidaBlackjack struct {
     BlackjackNatural bool             `json:"blackjack_natural"`
     Doblar           bool             `json:"doblar"`
     Seguro           float64          `json:"seguro"`
+    IsSplitAcesMano1   bool           `json:"is_split_aces_mano_1"`
+    IsSplitAcesMano2   bool           `json:"is_split_aces_mano_2"`
 }
 
