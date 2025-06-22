@@ -20,4 +20,7 @@ func BlackjackRoutes(rg *gin.RouterGroup) {
 	grupo.POST("/seguro", ctrl.Handler(ctrl.Service.Seguro))
 	grupo.POST("/split", ctrl.Handler(ctrl.Service.Split))
 	grupo.GET("/estado/:id_partida", ctrl.Estado)
+
+	grupo.GET("/ws", ctrl.JugarWS)
+
 }

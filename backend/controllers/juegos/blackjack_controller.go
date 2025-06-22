@@ -5,6 +5,8 @@ import (
 	"casino/services/juegos/blackjack"
 	"net/http"
 	"strconv"
+	"github.com/gorilla/websocket"
+	juegos "casino/websocket/juegos"
 
 	"github.com/gin-gonic/gin"
 )
@@ -62,4 +64,18 @@ func (ctrl *BlackjackController) Estado(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, res)
+}
+
+func (ctrl *BlackjackController) JugarWS(c *gin.Context) {
+	upgrader := websocket.Upgrader{
+		CheckOrigin: func(r *http.Request) bool { return true },
+	}
+	conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "No se pudo abrir WS"})
+		return
+	}
+	userID := c.GetUint("userID")
+	handler := juegos.NewBlackjackSocketHandler(conn, userID, ctrl.Service, ctrl.Service.Hub)
+	handler.Manejar()
 }
