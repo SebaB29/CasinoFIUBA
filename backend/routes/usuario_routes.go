@@ -18,4 +18,7 @@ func UsuarioRoutes(rg *gin.RouterGroup) {
 	// RUTAS ADMIN
 	usuarios.GET("/", middleware.JWTAuthMiddleware("admin"), usuarioController.ObtenerTodosLosUsuarios)
 	usuarios.GET("/:id", middleware.JWTAuthMiddleware("admin"), usuarioController.ObtenerUsuarioPorID)
+
+	usuarios.Use(middleware.JWTAuthMiddleware())
+	usuarios.GET("/saldo", usuarioController.ObtenerSaldo)
 }
