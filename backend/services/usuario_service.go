@@ -16,6 +16,7 @@ const FormatoFechaNacimiento = "2006-01-02"
 type UsuarioServiceInterface interface {
 	CrearUsuario(request dto.RegistroUsuarioRequestDTO) (*dto.RegistroUsuarioResponseDTO, error)
 	Login(request dto.LoginRequestDTO) (*dto.LoginResponseDTO, error)
+	ObtenerSaldo(usuarioID uint) (float64, error)
 	ObtenerPorID(id uint) (*models.Usuario, error)
 	ObtenerTodos() ([]models.Usuario, error)
 }
@@ -91,6 +92,14 @@ func (service *UsuarioService) Login(request dto.LoginRequestDTO) (*dto.LoginRes
 	}
 
 	return &response, nil
+}
+
+func (service *UsuarioService) ObtenerSaldo(usuarioID uint) (float64, error) {
+	usuario, err := service.repository.ObtenerPorID(usuarioID)
+	if err != nil || usuario == nil {
+		return 0, errores.ErrUsuarioNoEncontrado
+	}
+	return usuario.Saldo, nil
 }
 
 // NUEVA FUNCIONALIDAD ObtenerPorID busca un usuario por su ID y devuelve un error si no se encuentra
