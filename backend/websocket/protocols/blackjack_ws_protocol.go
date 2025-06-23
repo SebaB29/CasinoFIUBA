@@ -4,8 +4,9 @@ import "encoding/json"
 
 // BlackjackWSMessage es el tipo de mensaje que recibimos por WS para el blackjack
 type BlackjackWSMessage struct {
-	Action string          `json:"action"`
-	Data   json.RawMessage `json:"data"`
+    Action    string          `json:"action"`
+    IDPartida uint            `json:"id_partida"`
+    Data      json.RawMessage `json:"data"`
 }
 
 // ParseBlackjackWSMessage parsea los mensajes WS que llegan al blackjack
