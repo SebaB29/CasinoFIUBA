@@ -34,13 +34,13 @@ func (handler *RuletaSocketHandler) Manejar() {
 
 		request, err := protocolo.ParseWSMessage(msg)
 		if err != nil {
-			handler.conexion.WriteJSON(map[string]string{"error": "Mensaje inválido"})
+			handler.responderError("Mensaje inválido")
 			continue
 		}
 
 		switch request.Action {
 		case "apostar":
-			handler.procesarApuesta(request.Data)
+			handler.procesarApuestas(request.Data)
 		case "retirarse":
 			handler.desconectar()
 			return
@@ -50,16 +50,26 @@ func (handler *RuletaSocketHandler) Manejar() {
 	}
 }
 
-func (handler *RuletaSocketHandler) procesarApuesta(data json.RawMessage) {
-	var datos dto.RuletaRequestDTO
-	if err := json.Unmarshal(data, &datos); err != nil {
-		handler.conexion.WriteJSON(map[string]string{"error": "Datos de apuesta inválidos"})
+func (handler *RuletaSocketHandler) procesarApuestas(data json.RawMessage) {
+	var req struct {
+		Apuestas []dto.RuletaRequestDTO `json:"apuestas"`
+	}
+
+	if err := json.Unmarshal(data, &req); err != nil {
+		handler.responderError("Datos de apuestas inválidos")
 		return
 	}
 
-	if err := handler.ruletaService.Jugar(handler.userID, datos, handler.conexion); err != nil {
-		handler.conexion.WriteJSON(map[string]string{"error": err.Error()})
+	if len(req.Apuestas) == 0 {
+		handler.responderError("No se enviaron apuestas")
 		return
+	}
+
+	for _, apuesta := range req.Apuestas {
+		if err := handler.ruletaService.Jugar(handler.userID, apuesta, handler.conexion); err != nil {
+			handler.responderError("Error en una de las apuestas: " + err.Error())
+			return
+		}
 	}
 }
 

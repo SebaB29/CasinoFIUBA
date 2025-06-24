@@ -9,15 +9,6 @@ type RuletaRequestDTO struct {
 	Paridad     string  `json:"paridad,omitempty"`
 	AltoBajo    string  `json:"alto_bajo,omitempty"`
 }
-
-type RuletaResponseDTO struct {
-	Mensaje       string  `json:"mensaje"`
-	NumeroGanador int     `json:"numero_ganador"`
-	ColorGanador  string  `json:"color"`
-	MontoApostado float64 `json:"monto_apostado"`
-	Ganancia      float64 `json:"ganancia"`
-}
-
 type ResultadoIndividualDTO struct {
 	TipoApuesta   string      `json:"tipo_apuesta"`
 	MontoApostado float64     `json:"monto_apostado"`
