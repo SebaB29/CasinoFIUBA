@@ -51,7 +51,6 @@ sh start.sh
 Este script compila y levanta:
 * PostgreSQL
 * Backend en Go
-* Frontend en React
 
 ## 📁 Estructura del proyecto
 ```
