@@ -1,18 +1,27 @@
 package controllers
 
 import (
-    "casino/db"
+    "net/http"
+    "strconv"
     dto "casino/dto/juegos"
     "casino/services/juegos/blackjack"
-    "casino/models"
-    repo "casino/repositories/juegos"
-    "net/http"
-
     "github.com/gin-gonic/gin"
+    "github.com/gorilla/websocket"
+    juegos "casino/websocket/juegos"
 )
 
-// POST /blackjack/nueva
-func CrearPartidaBlackjack(c *gin.Context) {
+type BlackjackController struct {
+    Service *blackjack.BlackjackService
+}
+
+func NuevoBlackjackController() *BlackjackController {
+    return &BlackjackController{
+        Service: blackjack.NuevoBlackjackService(),
+    }
+}
+
+// NuevaMesa: Crea una nueva mesa para el jugador que envía la request
+func (ctrl *BlackjackController) NuevaMesa(c *gin.Context) {
     var input dto.IniciarBlackjackDTO
     if err := c.ShouldBindJSON(&input); err != nil {
         c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -20,148 +29,84 @@ func CrearPartidaBlackjack(c *gin.Context) {
     }
 
     userID := c.GetUint("userID")
-    mazo := blackjack.MezclarMazo()
-
-    // Tomamos 2 para el jugador, 2 para la banca
-    carta1, mazo := blackjack.TomarCarta(mazo)
-    carta2, mazo := blackjack.TomarCarta(mazo)
-    cartaB1, mazo := blackjack.TomarCarta(mazo)
-    cartaB2, mazo := blackjack.TomarCarta(mazo)
-
-    partida := &models.PartidaBlackjack{
-        UserID:        userID,
-        Apuesta:       input.Apuesta,
-        CartasJugador: blackjack.CartasToString([]string{carta1, carta2}),
-        CartasBanca:   blackjack.CartasToString([]string{cartaB1, cartaB2}), // Guardamos ambas
-        Mazo:          blackjack.CartasToString(mazo),
-        Estado:        models.EnCurso,
-    }
-
-    if err := repo.CrearPartida(partida); err != nil {
-        c.JSON(http.StatusInternalServerError, gin.H{"error": "No se pudo crear la partida"})
+    res, err := ctrl.Service.NuevaMesa(userID, input.Apuesta)
+    if err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
         return
     }
 
-    // Solo mostramos la primera carta de la banca en la respuesta inicial
-    c.JSON(http.StatusOK, gin.H{
-        "id":             partida.ID,
-        "user_id":        partida.UserID,
-        "apuesta":        partida.Apuesta,
-        "cartas_jugador": []string{carta1, carta2},
-        "cartas_banca":   []string{cartaB1},
-        "estado":         partida.Estado,
-    })
+    c.JSON(http.StatusOK, res)
 }
 
-// POST /blackjack/hit
-func HitBlackjack(c *gin.Context) {
-    var input dto.JugadaBlackjackDTO
+// UnirseAMesa: Permite que un jugador se una a una mesa existente
+func (ctrl *BlackjackController) UnirseAMesa(c *gin.Context) {
+    var input dto.UnirseAMesaDTO
     if err := c.ShouldBindJSON(&input); err != nil {
         c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
         return
     }
 
-    partida, err := repo.ObtenerPartidaPorID(input.IDPartida)
-    if err != nil || partida.Estado != models.EnCurso {
-        c.JSON(http.StatusBadRequest, gin.H{"error": "Partida no encontrada o ya finalizada"})
+    userID := c.GetUint("userID")
+    res, err := ctrl.Service.UnirseAMesa(userID, input.IDMesa, input.Apuesta)
+    if err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
         return
     }
 
-    mazo := blackjack.StringToCartas(partida.Mazo)
-    cartasJugador := blackjack.StringToCartas(partida.CartasJugador)
-
-    nuevaCarta, mazo := blackjack.TomarCarta(mazo)
-    cartasJugador = append(cartasJugador, nuevaCarta)
-
-    valor := blackjack.CalcularValor(cartasJugador)
-    if valor > 21 {
-        partida.Estado = models.Perdida
-    }
-
-    // Actualizar partida
-    partida.CartasJugador = blackjack.CartasToString(cartasJugador)
-    partida.Mazo = blackjack.CartasToString(mazo)
-
-    if err := repo.ActualizarPartida(partida); err != nil {
-        c.JSON(http.StatusInternalServerError, gin.H{"error": "Error actualizando partida"})
-        return
-    }
-
-    c.JSON(http.StatusOK, gin.H{
-        "cartas_jugador": cartasJugador,
-        "valor":          valor,
-        "estado":         partida.Estado,
-    })
+    c.JSON(http.StatusOK, res)
 }
 
-// POST /blackjack/stand
-func StandBlackjack(c *gin.Context) {
-    var input dto.JugadaBlackjackDTO
-    if err := c.ShouldBindJSON(&input); err != nil {
-        c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+// EstadoMesa: Devuelve el estado global de la mesa para el jugador que consulta
+func (ctrl *BlackjackController) EstadoMesa(c *gin.Context) {
+    idMesa, err := strconv.Atoi(c.Param("id_mesa"))
+    if err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "ID de mesa inválido"})
         return
     }
 
-    partida, err := repo.ObtenerPartidaPorID(input.IDPartida)
-    if err != nil || partida.Estado != models.EnCurso {
-        c.JSON(http.StatusBadRequest, gin.H{"error": "Partida no encontrada o ya finalizada"})
+    userID := c.GetUint("userID")
+    res, err := ctrl.Service.ObtenerEstadoMesa(uint(idMesa), userID)
+    if err != nil {
+        c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
         return
     }
 
-    cartasJugador := blackjack.StringToCartas(partida.CartasJugador)
-    mazo := blackjack.StringToCartas(partida.Mazo)
-
-    // Revelar todas las cartas de la banca guardadas desde el inicio
-    cartasBanca := blackjack.StringToCartas(partida.CartasBanca)
-
-    // Reglas de la banca: sacar hasta alcanzar 17
-    for blackjack.CalcularValor(cartasBanca) < 17 && len(mazo) > 0 {
-        var carta string
-        carta, mazo = blackjack.TomarCarta(mazo)
-        cartasBanca = append(cartasBanca, carta)
-    }
-
-    valJugador := blackjack.CalcularValor(cartasJugador)
-    valBanca := blackjack.CalcularValor(cartasBanca)
-
-    switch {
-    case valJugador > 21:
-        partida.Estado = models.Perdida
-    case valBanca > 21:
-        partida.Estado = models.Ganada
-    case valJugador > valBanca:
-        partida.Estado = models.Ganada
-    case valJugador < valBanca:
-        partida.Estado = models.Perdida
-    default:
-        partida.Estado = models.Empatada
-    }
-
-    // Actualizar partida
-    partida.CartasBanca = blackjack.CartasToString(cartasBanca)
-    partida.Mazo = blackjack.CartasToString(mazo)
-
-    if err := repo.ActualizarPartida(partida); err != nil {
-        c.JSON(http.StatusInternalServerError, gin.H{"error": "Error actualizando estado"})
-        return
-    }
-
-    c.JSON(http.StatusOK, gin.H{
-        "cartas_jugador": cartasJugador,
-        "cartas_banca":   cartasBanca,
-        "estado":         partida.Estado,
-    })
+    c.JSON(http.StatusOK, res)
 }
 
-// GET /blackjack/estado/:id_partida
-func ObtenerEstadoBlackjack(c *gin.Context) {
-    idParam := c.Param("id_partida")
-    var partida models.PartidaBlackjack
+// Handler es un helper para acciones como hit, stand, etc.
+func (ctrl *BlackjackController) Handler(action func(uint, uint) (gin.H, error)) gin.HandlerFunc {
+    return func(c *gin.Context) {
+        var input dto.JugadaBlackjackDTO
+        if err := c.ShouldBindJSON(&input); err != nil {
+            c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+            return
+        }
 
-    if err := db.DB.First(&partida, idParam).Error; err != nil {
-        c.JSON(http.StatusNotFound, gin.H{"error": "Partida no encontrada"})
+        userID := c.GetUint("userID")
+        res, err := action(input.IDMesa, userID)
+        if err != nil {
+            c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+            return
+        }
+
+        c.JSON(http.StatusOK, res)
+    }
+}
+
+// JugarWS: Handler que acepta la conexión WebSocket
+func (ctrl *BlackjackController) JugarWS(c *gin.Context) {
+    upgrader := websocket.Upgrader{
+        CheckOrigin: func(r *http.Request) bool { return true },
+    }
+
+    conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
+    if err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "No se pudo abrir WS"})
         return
     }
 
-    c.JSON(http.StatusOK, partida)
+    userID := c.GetUint("userID")
+    handler := juegos.NewBlackjackSocketHandler(conn, userID, ctrl.Service, ctrl.Service.Hub)
+    handler.Manejar()
 }

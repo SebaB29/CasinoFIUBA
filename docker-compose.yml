@@ -28,17 +28,17 @@ services:
     depends_on:
       - db
 
-  frontend:
-    build: ./frontend
-    container_name: casino-frontend
-    ports:
-      - "3000:3000"
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
-    command: ["npm", "run", "dev"]
-    depends_on:
-      - backend
+  # frontend:
+  #   build: ./frontend
+  #   container_name: casino-frontend
+  #   ports:
+  #     - "3000:3000"
+  #   volumes:
+  #     - ./frontend:/app
+  #     - /app/node_modules
+  #   command: ["npm", "run", "dev"]
+  #   depends_on:
+  #     - backend
 
 volumes:
   pgdata:

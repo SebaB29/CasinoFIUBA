@@ -2,7 +2,7 @@
 
 Proyecto universitario que simula un sitio de apuestas tipo casino. Incluye juegos como ruleta, plinko, buscaminas, entre otros. 
 
-Backend en **Go**, frontend en **React**, base de datos **PostgreSQL**, todo orquestado con **Docker Compose**.
+Backend en **Go**, base de datos **PostgreSQL**, todo orquestado con **Docker Compose**.
 
 ---
 
@@ -57,7 +57,6 @@ Este script compila y levanta:
 ```
 .
 ├── backend/          # Backend en Go
-├── frontend/         # Frontend en React
 ├── test/             # Pruebas automáticas o manuales
 ├── .env.example      # Variables de entorno de ejemplo
 ├── .gitignore
@@ -72,7 +71,6 @@ Para detener los servicios, simplemente presioná `Ctrl+C` en la terminal donde 
 ## 🌐 URLs importantes
 | Servicio   | URL                                            |
 | ---------- | ---------------------------------------------- |
-| Frontend   | [http://localhost:3000](http://localhost:3000) |
 | Backend    | [http://localhost:8080](http://localhost:8080) |
 | PostgreSQL | `localhost:5432` (accesible internamente)      |
 
