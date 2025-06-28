@@ -1,6 +1,9 @@
 package blackjack
 
-import "github.com/gin-gonic/gin"
+import (
+	dto "casino/dto/juegos"
+	"github.com/gin-gonic/gin"
+)
 
 // EventoBlackjack representa un evento que se envía por WS a un jugador
 type EventoBlackjack struct {
@@ -36,9 +39,9 @@ func (hub *BlackjackHub) Run() {
 }
 
 // BroadcastEstado encola un evento para enviar estado a un jugador
-func (hub *BlackjackHub) BroadcastEstado(userID uint, estado gin.H) {
+func (hub *BlackjackHub) BroadcastEstado(userID uint, estado dto.BlackjackEstadoDTO) {
 	hub.eventos <- EventoBlackjack{
 		UserID: userID,
-		Estado: estado,
+		Estado: gin.H{"estado": estado},
 	}
 }

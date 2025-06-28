@@ -67,10 +67,10 @@ func ConectarDB() {
 		log.Fatalf("Error al migrar la base de datos: %v", err)
 	}
 	
-	// Migrar modelo PartidaBlackjack (crea tabla si no existe)
-	if err := DB.AutoMigrate(&models.PartidaBlackjack{}); err != nil {
-		log.Fatalf("Error al migrar la base de datos: %v", err)
-	}
+	// Migrar modelos de Blackjack (mesa + manos) crea tablas si no existen
+    if err := DB.AutoMigrate(&models.MesaBlackjack{}, &models.ManoJugadorBlackjack{}); err != nil {
+	log.Fatalf("Error al migrar modelos de Blackjack: %v", err)
+    }
 
 	// Migrar modelo JugadaRuleta (crea tabla si no existe)
 	if err := DB.AutoMigrate(&models.JugadaRuleta{}); err != nil {

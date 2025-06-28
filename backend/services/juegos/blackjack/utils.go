@@ -130,17 +130,48 @@ func Es17Blando(cartas []string) bool {
 
 // EvaluarResultado determina el resultado de una mano de Blackjack.
 func EvaluarResultado(valorJugador, valorBanca int) string {
-	if valorJugador > 21 {
-		return "perdida" 
-	}
-	if valorBanca > 21 {
-		return "ganada" 
-	}
-	if valorJugador > valorBanca {
-		return "ganada"
-	}
-	if valorJugador < valorBanca {
-		return "perdida"
-	}
-	return "empatada" 
+    // Si el jugador se pasa, pierde automáticamente
+    if valorJugador > 21 {
+        return "perdida"
+    }
+
+    // Si la banca se pasa y el jugador no, gana el jugador
+    if valorBanca > 21 {
+        return "ganada"
+    }
+
+    // Si el jugador tiene más valor que la banca
+    if valorJugador > valorBanca {
+        return "ganada"
+    }
+
+    // Si la banca tiene más valor que el jugador
+    if valorJugador < valorBanca {
+        return "perdida"
+    }
+
+    // Si empatan exactamente
+    return "empatada"
 }
+
+
+func CalcularEstadoFinal(resultado1, resultado2 string) string {
+    if resultado2 == "" {
+        return "en_curso" // Mano 2 no fue jugada aún
+    }
+
+    // Ambas manos están resueltas, calculamos estado combinado
+    if resultado1 == "ganada" && resultado2 == "ganada" {
+        return "ganada"
+    }
+    if resultado1 == "perdida" && resultado2 == "perdida" {
+        return "perdida"
+    }
+    if resultado1 == "empatada" && resultado2 == "empatada" {
+        return "empatada"
+    }
+
+    // Resultados mezclados
+    return "mixta"
+}
+

@@ -32,17 +32,14 @@ type RetirarseRequest struct {
 func CrearPartidaBuscaminas(c *gin.Context) {
 	var req NuevaPartidaRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		log.Println("❌ Error de request al crear partida:", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
 	userID := c.GetUint("userID")
-	log.Printf("🛠️ Creando nueva partida (Usuario %d) - Minas: %d | Apuesta: %.2f", userID, req.Minas, req.Apuesta)
 
 	partida, err := buscaminas.CrearPartida(5, 5, req.Minas, req.Apuesta)
 	if err != nil {
-		log.Println("❌ Error al crear partida lógica:", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -57,12 +54,9 @@ func CrearPartidaBuscaminas(c *gin.Context) {
 	}
 
 	if err := repo.Crear(partidaDB); err != nil {
-		log.Println("❌ Error al guardar partida en DB:", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "No se pudo guardar la partida"})
 		return
 	}
-
-	log.Printf("✅ Partida creada correctamente (ID %d)", partidaDB.ID)
 
 	c.JSON(http.StatusCreated, gin.H{
 		"id_partida":      partidaDB.ID,
@@ -74,44 +68,35 @@ func CrearPartidaBuscaminas(c *gin.Context) {
 
 func AbrirCeldaBuscaminas(c *gin.Context) {
 	rawData, _ := io.ReadAll(c.Request.Body)
-	log.Println("📦 Body recibido en /abrir:", string(rawData))
 	c.Request.Body = io.NopCloser(bytes.NewBuffer(rawData))
 
 	var req AbrirCeldaRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		log.Println("🔴 Error al bindear:", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
 	userID := c.GetUint("userID")
-	log.Printf("👆 Usuario %d intenta abrir celda (%d,%d) en partida %d", userID, *req.X, *req.Y, req.IDPartida)
-
 	var partidaDB models.PartidaBuscaminas
 	if err := db.DB.First(&partidaDB, req.IDPartida).Error; err != nil {
-		log.Println("🔴 Partida no encontrada:", err)
 		c.JSON(http.StatusNotFound, gin.H{"error": "Partida no encontrada"})
 		return
 	}
 
 	partida, err := reconstruirPartida(&partidaDB)
 	if err != nil {
-		log.Println("❌ Error reconstruyendo partida:", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error reconstruyendo la partida"})
 		return
 	}
 
 	err = partida.AbrirCelda(*req.X, *req.Y)
 	if err != nil {
-		// Pisar una mina u otro error del juego es 200 OK
-		log.Println("💥 Jugada válida - celda con mina u otra condición:", err)
+		log.Println(" Jugada válida - celda con mina u otra condición:", err)
 	}
 
 	partidaDB.Estado = string(partida.Estado)
 	partidaDB.CeldasAbiertas = partida.CeldasAbiertas
 	db.DB.Save(&partidaDB)
-
-	log.Printf("🟢 Resultado - Estado: %s | Celdas abiertas: %d", partida.Estado, partida.CeldasAbiertas)
 
 	responderPartida(c, partida, &partidaDB, http.StatusOK)
 }
@@ -119,17 +104,13 @@ func AbrirCeldaBuscaminas(c *gin.Context) {
 func RetirarseBuscaminas(c *gin.Context) {
 	var req RetirarseRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		log.Println("❌ Error en retiro:", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
 	userID := c.GetUint("userID")
-	log.Printf("📤 Usuario %d intenta retirarse de partida %d", userID, req.IDPartida)
-
 	var partidaDB models.PartidaBuscaminas
 	if err := db.DB.First(&partidaDB, req.IDPartida).Error; err != nil {
-		log.Println("🔴 Partida no encontrada:", err)
 		c.JSON(http.StatusNotFound, gin.H{"error": "Partida no encontrada"})
 		return
 	}
@@ -145,31 +126,25 @@ func RetirarseBuscaminas(c *gin.Context) {
 
 	partida, err := reconstruirPartida(&partidaDB)
 	if err != nil {
-		log.Println("❌ Error reconstruyendo:", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error reconstruyendo la partida"})
 		return
 	}
 
 	premio, err := partida.Retirarse()
 	if err != nil {
-		log.Println("⚠️ No se pudo retirar:", err)
+		log.Println(" No se pudo retirar:", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
 	partidaDB.Estado = string(partida.Estado)
 	db.DB.Save(&partidaDB)
-
-	log.Printf("💰 Usuario %d se retiró y ganó: %.2f", userID, premio)
-
 	c.JSON(http.StatusOK, gin.H{
 		"mensaje": "Te retiraste exitosamente",
 		"estado":  partida.Estado,
 		"premio":  premio,
 	})
 }
-
-// Helpers
 
 func reconstruirPartida(partidaDB *models.PartidaBuscaminas) (*buscaminas.Partida, error) {
 	partida, err := buscaminas.CrearPartida(5, 5, partidaDB.CantidadMinas, partidaDB.MontoApostado)
@@ -214,14 +189,12 @@ func VerMinasDebug(c *gin.Context) {
 	idStr := c.Param("id")
 	var partidaDB models.PartidaBuscaminas
 	if err := db.DB.First(&partidaDB, idStr).Error; err != nil {
-		log.Println("🔴 Partida no encontrada para debug:", err)
 		c.JSON(http.StatusNotFound, gin.H{"error": "Partida no encontrada"})
 		return
 	}
 
 	partida, err := buscaminas.CrearPartida(5, 5, partidaDB.CantidadMinas, partidaDB.MontoApostado)
 	if err != nil {
-		log.Println("❌ Error reconstruyendo partida para debug:", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error reconstruyendo la partida"})
 		return
 	}

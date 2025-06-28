@@ -2,16 +2,16 @@ package juegos
 
 import (
 	"casino/services/juegos/blackjack"
+	juegos "casino/dto/juegos" 
 	protocolo "casino/websocket/protocols"
 	"github.com/gorilla/websocket"
-	"github.com/gin-gonic/gin"
 )
 
 type BlackjackSocketHandler struct {
-	conexion      *websocket.Conn
-	userID        uint
-	blackjackSvc  *blackjack.BlackjackService
-	hub           *blackjack.BlackjackHub
+	conexion     *websocket.Conn
+	userID       uint
+	blackjackSvc *blackjack.BlackjackService
+	hub          *blackjack.BlackjackHub
 }
 
 func NewBlackjackSocketHandler(
@@ -28,53 +28,68 @@ func NewBlackjackSocketHandler(
 	}
 }
 
-// Manejar lee los mensajes WS y dispara la lógica correspondiente
+// Manejar procesa los mensajes del WebSocket para el juego de Blackjack
 func (handler *BlackjackSocketHandler) Manejar() {
-    defer handler.conexion.Close()
+	defer handler.conexion.Close()
 
-    for {
-        _, msg, err := handler.conexion.ReadMessage()
-        if err != nil {
-            break
-        }
+	for {
+		_, msg, err := handler.conexion.ReadMessage()
+		if err != nil {
+			break
+		}
 
-        request, err := protocolo.ParseBlackjackWSMessage(msg)
-        if err != nil {
-            handler.conexion.WriteJSON(map[string]string{"error": "Mensaje inválido"})
-            continue
-        }
+		request, err := protocolo.ParseBlackjackWSMessage(msg)
+		if err != nil {
+			handler.conexion.WriteJSON(map[string]string{"error": "Mensaje inválido"})
+			continue
+		}
 
-        var resp gin.H
-        var actionErr error
+		var resp juegos.BlackjackEstadoDTO
+		var actionErr error
 
-        switch request.Action {
-        case "hit":
-            resp, actionErr = handler.blackjackSvc.Hit(request.IDPartida)
-        case "stand":
-            resp, actionErr = handler.blackjackSvc.Stand(request.IDPartida)
-        case "doblar":
-            resp, actionErr = handler.blackjackSvc.Doblar(request.IDPartida)
-        case "rendirse":
-            resp, actionErr = handler.blackjackSvc.Rendirse(request.IDPartida)
-        case "split":
-            resp, actionErr = handler.blackjackSvc.Split(request.IDPartida)
-        case "seguro":
-            resp, actionErr = handler.blackjackSvc.Seguro(request.IDPartida)
-        default:
-            handler.conexion.WriteJSON(map[string]string{"error": "Acción no reconocida"})
-            continue
-        }
+		idMesa := request.IDMesa
 
-        if actionErr != nil {
-            handler.conexion.WriteJSON(map[string]string{"error": actionErr.Error()})
-            continue
-        }
+		switch request.Action {
+		case "hit":
+			resp, actionErr = handler.blackjackSvc.Hit(idMesa, handler.userID)
+		case "stand":
+			resp, actionErr = handler.blackjackSvc.Stand(idMesa, handler.userID)
+		case "doblar":
+			resp, actionErr = handler.blackjackSvc.Doblar(idMesa, handler.userID)
+		case "rendirse":
+			resp, actionErr = handler.blackjackSvc.Rendirse(idMesa, handler.userID)
+		case "split":
+			resp, actionErr = handler.blackjackSvc.Split(idMesa, handler.userID)
+		case "seguro":
+			resp, actionErr = handler.blackjackSvc.Seguro(idMesa, handler.userID)
+		default:
+			handler.conexion.WriteJSON(map[string]string{"error": "Acción no reconocida"})
+			continue
+		}
 
-        // Mandar estado al cliente que envió la acción
-        handler.conexion.WriteJSON(resp)
+		if actionErr != nil {
+			handler.conexion.WriteJSON(map[string]string{"error": actionErr.Error()})
+			continue
+		}
 
-        // Además, enviar el estado a todos los demás que corresponda
-        handler.hub.BroadcastEstado(handler.userID, resp)
-    }
+		// Enviar al jugador actual
+		handler.conexion.WriteJSON(resp)
+
+		// Estado del jugador que hizo la jugada
+		estado, err := handler.blackjackSvc.ObtenerEstadoMesa(idMesa, handler.userID)
+		if err == nil {
+			handler.hub.BroadcastEstado(handler.userID, estado)
+		}
+
+		// Broadcast al jugador al que le toca el turno
+		mesa, err := handler.blackjackSvc.ObtenerMesa(idMesa)
+		if err == nil && mesa.Estado == "en_curso" && mesa.JugadorActual < len(mesa.ManosJugadores) {
+			nuevoJugadorID := mesa.ManosJugadores[mesa.JugadorActual].UserID
+
+			if nuevoJugadorID != handler.userID {
+				estadoNuevo := handler.blackjackSvc.EstadoParaJugador(mesa, nuevoJugadorID)
+				handler.hub.BroadcastEstado(nuevoJugadorID, estadoNuevo)
+			}
+		}
+	}
 }
-

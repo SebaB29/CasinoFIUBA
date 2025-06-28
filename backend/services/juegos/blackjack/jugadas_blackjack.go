@@ -2,452 +2,456 @@ package blackjack
 
 
 import (
+    "log"
     "strings"
+    dto "casino/dto/juegos"
     "casino/models"
     repo "casino/repositories/juegos"
     "fmt"
-    "github.com/gin-gonic/gin"
 )
 
-
-// finalizarPartida devuelve resultados por mano y actualiza el estado global
-func finalizarPartida(partida *models.PartidaBlackjack, mazo []string) (string, string, error) {
-    cartasBanca := StringToCartas(partida.CartasBanca)
-    for CalcularValor(cartasBanca) < 17 && len(mazo) > 0 {
-        carta, resto := TomarCarta(mazo)
-        cartasBanca = append(cartasBanca, carta)
-        mazo = resto
-    }
-    partida.CartasBanca = CartasToString(cartasBanca)
-    partida.Mazo = CartasToString(mazo)
-
-    valBanca := CalcularValor(cartasBanca)
-    cartasJ1 := StringToCartas(partida.CartasJugador)
-    valJ1 := CalcularValor(cartasJ1)
-    res1 := EvaluarResultado(valJ1, valBanca)
-
-    res2 := ""
-    if partida.CartasJugadorSplit != "" {
-        cartasJ2 := StringToCartas(partida.CartasJugadorSplit)
-        valJ2 := CalcularValor(cartasJ2)
-        res2 = EvaluarResultado(valJ2, valBanca)
-
-        switch {
-        case res1 == "ganada" || res2 == "ganada":
-            partida.Estado = models.Ganada
-        case res1 == "perdida" && res2 == "perdida":
-            partida.Estado = models.Perdida
-        case res1 == "empatada" && res2 == "empatada":
-            partida.Estado = models.Empatada
-        case (res1 == "empatada" && res2 == "perdida") || (res1 == "perdida" && res2 == "empatada"):
-            partida.Estado = models.Perdida
-        case (res1 == "ganada" && res2 == "empatada") || (res1 == "empatada" && res2 == "ganada"):
-            partida.Estado = models.Ganada
-        default:
-            partida.Estado = models.Empatada
+// todosLosJugadoresActivosTerminaron verifica si todos los jugadores activos de la mesa han terminado su mano
+func todosLosJugadoresActivosTerminaron(mesa *models.MesaBlackjack) bool {
+    for _, mano := range mesa.ManosJugadores {
+        if mano.Estado == string(models.EnCurso) {
+            return false
         }
-    } else {
-        partida.Estado = EstadoFromResultado(res1)
     }
-
-    return res1, res2, repo.ActualizarPartida(partida)
+    return true
 }
-
-func (s *BlackjackService) Hit(idPartida uint) (gin.H, error) {
-    partida, err := repo.ObtenerPartidaPorID(idPartida)
-    if err != nil {
-        return nil, fmt.Errorf("partida no encontrada")
-    }
-    if partida.Estado != models.EnCurso {
-        return nil, fmt.Errorf("la partida ya está finalizada")
+// avanzarManoOMesa avanza a la siguiente mano del jugador o al siguiente jugador y finaliza la mesa si es necesario
+func (s *BlackjackService) avanzarManoOMesa(mano *models.ManoJugadorBlackjack, mesa *models.MesaBlackjack) {
+    // Si tiene split y falta jugar la segunda mano
+    if mano.ManoActual == 1 && mano.CartasSplit != "" && mano.ResultadoMano2 == "" {
+        mano.ManoActual = 2
+        return
     }
 
-    mazo := StringToCartas(partida.Mazo)
-    var mano []string
-    if partida.ManoActual == 2 {
-        mano = StringToCartas(partida.CartasJugadorSplit)
-    } else {
-        mano = StringToCartas(partida.CartasJugador)
-    }
+    // actualizar el estado de la mano
+    mano.Estado = CalcularEstadoFinal(mano.ResultadoMano1, mano.ResultadoMano2)
 
-    if (partida.ManoActual == 1 && partida.IsSplitAcesMano1 && len(mano) >= 2) ||
-       (partida.ManoActual == 2 && partida.IsSplitAcesMano2 && len(mano) >= 2) {
-        return nil, fmt.Errorf("no puedes pedir más cartas en una mano de Ases divididos")
-    }
-    if len(mazo) == 0 {
-        return nil, fmt.Errorf("el mazo está vacío")
-    }
-
-    nuevaCarta, mazo := TomarCarta(mazo)
-    mano = append(mano, nuevaCarta)
-    valor := CalcularValor(mano)
-
-    if partida.ManoActual == 2 {
-        partida.CartasJugadorSplit = CartasToString(mano)
-    } else {
-        partida.CartasJugador = CartasToString(mano)
-    }
-    partida.Mazo = CartasToString(mazo)
-
-    if valor >= 21 {
-        if partida.ManoActual == 1 && partida.CartasJugadorSplit != "" {
-            partida.ManoActual = 2
-        } else {
-            res1, res2, err := finalizarPartida(partida, mazo)
-            if err != nil {
-                return nil, fmt.Errorf("error finalizando: %w", err)
+    // chequea si todos terminaron
+    if todosLosJugadoresActivosTerminaron(mesa) {
+        if err := finalizarMesa(mesa); err == nil {
+            nuevaMesa, err := repo.ObtenerMesaConManos(mesa.ID)
+            if err == nil {
+                *mesa = *nuevaMesa
             }
-            return gin.H{
-                "carta_nueva":      nuevaCarta,
-                "estado":           partida.Estado,
-                "resultado_mano_1": res1,
-                "resultado_mano_2": res2,
-                "cartas_banca":     StringToCartas(partida.CartasBanca),
-                "valor_banca":      CalcularValor(StringToCartas(partida.CartasBanca)),
-            }, nil
         }
+        return
     }
 
-    if err := repo.ActualizarPartida(partida); err != nil {
-        return nil, fmt.Errorf("error actualizando: %w", err)
+    // Si no todos terminaron, avanza al siguiente jugador
+    s.AvanzarTurno(mesa)
+}
+// finalizarMesa resuelve la banca y determina el resultado para cada jugador
+func finalizarMesa(mesa *models.MesaBlackjack) error {
+    cartasBanca := StringToCartas(mesa.CartasBanca)
+    mazo := StringToCartas(mesa.Mazo)
+
+    // Banca roba hasta llegar a 17 o más
+    for CalcularValor(cartasBanca) < 17 && len(mazo) > 0 {
+        var carta string
+        carta, mazo = TomarCarta(mazo)
+        cartasBanca = append(cartasBanca, carta)
     }
-    return gin.H{
-        "carta_nueva":         nuevaCarta,
-        "mano_actual":         partida.ManoActual,
-        "cartas_mano_1":       StringToCartas(partida.CartasJugador),
-        "valor_mano_1":        CalcularValor(StringToCartas(partida.CartasJugador)),
-        "cartas_mano_2":       StringToCartas(partida.CartasJugadorSplit),
-        "valor_mano_2":        CalcularValor(StringToCartas(partida.CartasJugadorSplit)),
-        "cartas_banca":        []string{StringToCartas(partida.CartasBanca)[0], "???"},
-        "valor_banca_visible": CalcularValor([]string{StringToCartas(partida.CartasBanca)[0]}),
-        "estado":              partida.Estado,
-    }, nil
+
+    valorBanca := CalcularValor(cartasBanca)
+    mesa.CartasBanca = CartasToString(cartasBanca)
+    mesa.Mazo = CartasToString(mazo)
+
+    // Evaluar cada mano de los jugadores
+    for i := range mesa.ManosJugadores {
+        mano := &mesa.ManosJugadores[i]
+
+        // Saltear solo si ya se resolvió por completo (ambas manos si hay split)
+        if mano.ResultadoMano1 != "" && (mano.CartasSplit == "" || mano.ResultadoMano2 != "") {
+            mano.Estado = CalcularEstadoFinal(mano.ResultadoMano1, mano.ResultadoMano2)
+            continue
+        }
+
+        // Mano principal
+        if mano.ResultadoMano1 == "" {
+            cartas := StringToCartas(mano.Cartas)
+            valor1 := CalcularValor(cartas)
+            mano.ResultadoMano1 = EvaluarResultado(valor1, valorBanca)
+        }
+
+        // Mano dividida
+        if mano.CartasSplit != "" && mano.ResultadoMano2 == "" {
+            cartasSplit := StringToCartas(mano.CartasSplit)
+            valor2 := CalcularValor(cartasSplit)
+            mano.ResultadoMano2 = EvaluarResultado(valor2, valorBanca)
+        }
+
+        // Siempre actualiza el estado final
+        mano.Estado = CalcularEstadoFinal(mano.ResultadoMano1, mano.ResultadoMano2)
+    }
+
+    // Marca la mesa como finalizada
+    mesa.Estado = "finalizada"
+
+    if err := repo.ActualizarMesa(mesa); err != nil {
+        return fmt.Errorf("fallo al finalizar la mesa: %w", err)
+    }
+
+    return nil
 }
 
-func (s *BlackjackService) Stand(idPartida uint) (gin.H, error) {
-    partida, err := repo.ObtenerPartidaPorID(idPartida)
+func (s *BlackjackService) Hit(idMesa uint, userID uint) (dto.BlackjackEstadoDTO, error) {
+    mesa, err := repo.ObtenerMesaConManos(idMesa)
     if err != nil {
-        return nil, fmt.Errorf("partida no encontrada")
-    }
-    if partida.Estado != models.EnCurso {
-        return nil, fmt.Errorf("la partida ya fue finalizada")
+        return dto.BlackjackEstadoDTO{}, fmt.Errorf("mesa no encontrada")
     }
 
-
-    mazo := StringToCartas(partida.Mazo)
-    if partida.ManoActual == 1 && partida.CartasJugadorSplit != "" {
-        partida.ManoActual = 2
-        return gin.H{
-            "mensaje":             "Pasando a la segunda mano.",
-            "mano_actual":         2,
-            "cartas_mano_1":       StringToCartas(partida.CartasJugador),
-            "valor_mano_1":        CalcularValor(StringToCartas(partida.CartasJugador)),
-            "cartas_mano_2":       StringToCartas(partida.CartasJugadorSplit),
-            "valor_mano_2":        CalcularValor(StringToCartas(partida.CartasJugadorSplit)),
-            "cartas_banca":        []string{StringToCartas(partida.CartasBanca)[0], "???"},
-            "valor_banca_visible": CalcularValor([]string{StringToCartas(partida.CartasBanca)[0]}),
-        }, nil
+    if mesa.Estado != "en_curso" {
+        return dto.BlackjackEstadoDTO{}, fmt.Errorf("la mesa ya está finalizada")
     }
 
-
-    res1, res2, err := finalizarPartida(partida, mazo)
+    indiceMano, err := s.IndiceManoUsuario(mesa, userID)
     if err != nil {
-        return nil, fmt.Errorf("error finalizando: %w", err)
-    }
-    return gin.H{
-        "cartas_banca":      StringToCartas(partida.CartasBanca),
-        "valor_banca":       CalcularValor(StringToCartas(partida.CartasBanca)),
-        "cartas_mano_1":     StringToCartas(partida.CartasJugador),
-        "valor_mano_1":      CalcularValor(StringToCartas(partida.CartasJugador)),
-        "cartas_mano_2":     StringToCartas(partida.CartasJugadorSplit),
-        "valor_mano_2":      CalcularValor(StringToCartas(partida.CartasJugadorSplit)),
-        "resultado_mano_1":  res1,
-        "resultado_mano_2":  res2,
-        "estado":            partida.Estado,
-        "mensaje":           "Partida finalizada por Stand",
-    }, nil
-}
-
-func (s *BlackjackService) Doblar(idPartida uint) (gin.H, error) {
-    partida, err := repo.ObtenerPartidaPorID(idPartida)
-    if err != nil {
-        return nil, fmt.Errorf("partida no encontrada")
-    }
-    if partida.Estado != models.EnCurso {
-        return nil, fmt.Errorf("la partida ya fue finalizada")
-    }
-    if partida.Doblar {
-        return nil, fmt.Errorf("ya se ha doblado")
+        return dto.BlackjackEstadoDTO{}, err
     }
 
-
-    var mano []string
-    if partida.ManoActual == 2 {
-        mano = StringToCartas(partida.CartasJugadorSplit)
-    } else {
-        mano = StringToCartas(partida.CartasJugador)
-    }
-    if len(mano) != 2 {
-        return nil, fmt.Errorf("solo puedes doblar con dos cartas iniciales")
+    if mesa.JugadorActual != indiceMano {
+        return dto.BlackjackEstadoDTO{}, fmt.Errorf("no es tu turno todavía")
     }
 
+    mano := &mesa.ManosJugadores[indiceMano]
+    if mano.Estado != string(models.EnCurso) {
+        return dto.BlackjackEstadoDTO{}, fmt.Errorf("esta mano ya está resuelta")
+    }
 
-    mazo := StringToCartas(partida.Mazo)
+    if (mano.ManoActual == 1 && mano.ResultadoMano1 != "") || (mano.ManoActual == 2 && mano.ResultadoMano2 != "") {
+        return dto.BlackjackEstadoDTO{}, fmt.Errorf("esta mano ya fue jugada")
+    }
+
+    mazo := StringToCartas(mesa.Mazo)
     if len(mazo) == 0 {
-        return nil, fmt.Errorf("mazo vacío")
+        return dto.BlackjackEstadoDTO{}, fmt.Errorf("no quedan cartas en el mazo")
     }
 
+    carta, mazo := TomarCarta(mazo)
 
-    nuevaCarta, mazo := TomarCarta(mazo)
-    mano = append(mano, nuevaCarta)
-    valor := CalcularValor(mano)
-
-
-    if partida.ManoActual == 1 {
-        partida.Apuesta *= 2
+    var cartas []string
+    if mano.ManoActual == 2 {
+        cartas = StringToCartas(mano.CartasSplit)
     } else {
-        partida.ApuestaSplit *= 2
+        cartas = StringToCartas(mano.Cartas)
     }
-    partida.Doblar = true
 
+    cartas = append(cartas, carta)
+    valor := CalcularValor(cartas)
 
-    if partida.ManoActual == 2 {
-        partida.CartasJugadorSplit = CartasToString(mano)
+    if mano.ManoActual == 2 {
+        mano.CartasSplit = CartasToString(cartas)
     } else {
-        partida.CartasJugador = CartasToString(mano)
-    }
-    partida.Mazo = CartasToString(mazo)
-
-
-    res1, res2, err := finalizarPartida(partida, mazo)
-    if err != nil {
-        return nil, fmt.Errorf("error finalizando: %w", err)
+        mano.Cartas = CartasToString(cartas)
     }
 
+    mesa.Mazo = CartasToString(mazo)
 
-    return gin.H{
-        "carta_nueva":        nuevaCarta,
-        "estado":             partida.Estado,
-        "resultado_mano_1":   res1,
-        "resultado_mano_2":   res2,
-        "apuesta_principal":  partida.Apuesta,
-        "apuesta_split":      partida.ApuestaSplit,
-        "cartas_banca":       StringToCartas(partida.CartasBanca),
-        "valor_banca":        CalcularValor(StringToCartas(partida.CartasBanca)),
-         "valor_mano_actual":  valor,
-    }, nil
+    // Evaluar si se pasa o llega a 21
+    if valor >= 21 {
+        if valor > 21 {
+            if mano.ManoActual == 2 {
+                mano.ResultadoMano2 = string(models.Perdida)
+            } else {
+                mano.ResultadoMano1 = string(models.Perdida)
+            }
+        } else {
+            if mano.ManoActual == 2 {
+                mano.ResultadoMano2 = string(models.Ganada)
+            } else {
+                mano.ResultadoMano1 = string(models.Ganada)
+            }
+        }
+
+        mano.Estado = CalcularEstadoFinal(mano.ResultadoMano1, mano.ResultadoMano2)
+        s.avanzarManoOMesa(mano, mesa)
+    } else {
+        // Mano sigue en juego, solo actualizamos la mesa
+        if err := repo.ActualizarMesa(mesa); err != nil {
+            return dto.BlackjackEstadoDTO{}, fmt.Errorf("error actualizando mesa: %w", err)
+        }
+
+        return s.EstadoParaJugador(mesa, userID), nil
+    }
+
+    if err := repo.ActualizarMesa(mesa); err != nil {
+        return dto.BlackjackEstadoDTO{}, fmt.Errorf("error actualizando mesa: %w", err)
+    }
+
+    log.Printf("Jugador actual post-hit: %d", mesa.JugadorActual)
+    log.Printf("JugadorActual: %d, UserID solicitado: %d, IndiceJugador: %d", mesa.JugadorActual, userID, indiceMano)
+
+    return s.EstadoParaJugador(mesa, userID), nil
 }
 
-func (s *BlackjackService) Rendirse(idPartida uint) (gin.H, error) {
-    partida, err := repo.ObtenerPartidaPorID(idPartida)
+func (s *BlackjackService) Stand(idMesa uint, userID uint) (dto.BlackjackEstadoDTO, error) {
+    mesa, err := repo.ObtenerMesaConManos(idMesa)
     if err != nil {
-        return nil, fmt.Errorf("partida no encontrada")
-    }
-    if partida.Estado != models.EnCurso {
-        return nil, fmt.Errorf("la partida ya fue finalizada")
+        return dto.BlackjackEstadoDTO{}, fmt.Errorf("mesa no encontrada")
     }
 
-
-    cartas := StringToCartas(partida.CartasJugador)
-    // Solo puede rendirse si no ha pedido cartas adicionales (es decir, tiene 2 cartas iniciales)
-    if len(cartas) > 2 {
-        return nil, fmt.Errorf("no puedes rendirte en esta fase del juego (solo es posible con las dos primeras cartas).")
-    }
-    // Normalmente, rendirse no está permitido si se ha hecho split.
-    if partida.CartasJugadorSplit != "" {
-        return nil, fmt.Errorf("no puedes rendirte si has dividido tus cartas.")
+    if mesa.Estado != "en_curso" {
+        return dto.BlackjackEstadoDTO{}, fmt.Errorf("la mesa ya ha finalizado")
     }
 
-
-    partida.Estado = models.Rendida
-    partida.Apuesta = partida.Apuesta / 2
-
-
-    if err := repo.ActualizarPartida(partida); err != nil {
-        return nil, fmt.Errorf("no se pudo actualizar la partida al rendirse: %w", err)
+    indiceMano, err := s.IndiceManoUsuario(mesa, userID)
+    if err != nil {
+        return dto.BlackjackEstadoDTO{}, err
     }
 
-
-    cartasBancaVisible := []string{}
-    valorBancaVisible := 0
-    if len(StringToCartas(partida.CartasBanca)) > 0 {
-        cartasBancaVisible = []string{StringToCartas(partida.CartasBanca)[0], "???"}
-        valorBancaVisible = CalcularValor([]string{StringToCartas(partida.CartasBanca)[0]})
+    if mesa.JugadorActual != indiceMano {
+        return dto.BlackjackEstadoDTO{}, fmt.Errorf("no es tu turno todavía")
     }
 
+    mano := &mesa.ManosJugadores[indiceMano]
 
-    return gin.H{
-        "mensaje":          "Te has rendido. Recuperas el 50% de tu apuesta.",
-        "estado":           partida.Estado,
-        "apuesta_restante": partida.Apuesta,
-        "cartas_mano_1":    cartas,
-        "valor_mano_1":     CalcularValor(cartas),
-        "cartas_banca":     cartasBancaVisible,
-        "valor_banca_visible": valorBancaVisible,
-    }, nil
+    if mano.Estado != string(models.EnCurso) {
+        return dto.BlackjackEstadoDTO{}, fmt.Errorf("esta mano ya fue resuelta")
+    }
+
+    // Avanzar a la siguiente mano o jugador
+    s.avanzarManoOMesa(mano, mesa)
+
+    if err := repo.ActualizarMesa(mesa); err != nil {
+        return dto.BlackjackEstadoDTO{}, fmt.Errorf("error actualizando mesa: %w", err)
+    }
+
+    return s.EstadoParaJugador(mesa, userID), nil
 }
 
-func (s *BlackjackService) Split(idPartida uint) (gin.H, error) {
-    partida, err := repo.ObtenerPartidaPorID(idPartida)
+func (s *BlackjackService) Doblar(idMesa uint, userID uint) (dto.BlackjackEstadoDTO, error) {
+    mesa, err := repo.ObtenerMesaConManos(idMesa)
     if err != nil {
-        return nil, fmt.Errorf("partida no encontrada")
-    }
-    if partida.Estado != models.EnCurso {
-        return nil, fmt.Errorf("la partida ya fue finalizada")
+        return dto.BlackjackEstadoDTO{}, fmt.Errorf("mesa no encontrada")
     }
 
-
-    cartas := StringToCartas(partida.CartasJugador)
-    // Validación clave: Solo se puede dividir si se tienen EXACTAMENTE dos cartas y son del mismo valor.
-    if len(cartas) != 2 || CalcularValor([]string{cartas[0]}) != CalcularValor([]string{cartas[1]}) {
-        return nil, fmt.Errorf("solo se puede dividir si las dos cartas iniciales son del mismo valor.")
-    }
-    // No se puede hacer split si ya hay una mano dividida (no se permite re-split en esta implementación)
-    if partida.CartasJugadorSplit != "" {
-        return nil, fmt.Errorf("ya has dividido una mano en esta partida.")
-    }
-    // No se puede doblar y hacer split
-    if partida.Doblar {
-        return nil, fmt.Errorf("no puedes dividir después de haber doblado.")
-    }
-    // No se puede rendir y hacer split (aunque la validación de rendirse ya cubre esto)
-    if partida.Estado == models.Rendida {
-        return nil, fmt.Errorf("no puedes dividir si ya te has rendido.")
+    if mesa.Estado != "en_curso" {
+        return dto.BlackjackEstadoDTO{}, fmt.Errorf("la mesa ya ha finalizado")
     }
 
+    indiceMano, err := s.IndiceManoUsuario(mesa, userID)
+    if err != nil {
+        return dto.BlackjackEstadoDTO{}, err
+    }
 
-    mazo := StringToCartas(partida.Mazo)
+    if mesa.JugadorActual != indiceMano {
+        return dto.BlackjackEstadoDTO{}, fmt.Errorf("no es tu turno todavía")
+    }
+
+    mano := &mesa.ManosJugadores[indiceMano]
+
+    if mano.Estado != string(models.EnCurso) {
+        return dto.BlackjackEstadoDTO{}, fmt.Errorf("esta mano ya está resuelta")
+    }
+
+    if mano.ManoActual != 1 || mano.CartasSplit != "" {
+        return dto.BlackjackEstadoDTO{}, fmt.Errorf("solo puedes doblar con una mano sin dividir")
+    }
+
+    cartas := StringToCartas(mano.Cartas)
+    if len(cartas) != 2 {
+        return dto.BlackjackEstadoDTO{}, fmt.Errorf("solo puedes doblar con dos cartas iniciales")
+    }
+
+    // Duplicar apuesta
+    mano.Apuesta *= 2
+
+    // Robar una carta
+    mazo := StringToCartas(mesa.Mazo)
+    if len(mazo) == 0 {
+        return dto.BlackjackEstadoDTO{}, fmt.Errorf("mazo vacío")
+    }
+
+    carta, mazo := TomarCarta(mazo)
+    cartas = append(cartas, carta)
+    mano.Cartas = CartasToString(cartas)
+    mesa.Mazo = CartasToString(mazo)
+
+    // Evaluar resultado automáticamente tras doblar
+    valor := CalcularValor(cartas)
+    if valor > 21 {
+        mano.ResultadoMano1 = string(models.Perdida)
+    }
+
+    mano.Estado = CalcularEstadoFinal(mano.ResultadoMano1, mano.ResultadoMano2)
+
+    s.avanzarManoOMesa(mano, mesa)
+
+    if err := repo.ActualizarMesa(mesa); err != nil {
+        return dto.BlackjackEstadoDTO{}, fmt.Errorf("error actualizando mesa: %w", err)
+    }
+
+    return s.EstadoParaJugador(mesa, userID), nil
+}
+
+func (s *BlackjackService) Rendirse(idMesa uint, userID uint) (dto.BlackjackEstadoDTO, error) {
+    mesa, err := repo.ObtenerMesaConManos(idMesa)
+    if err != nil {
+        return dto.BlackjackEstadoDTO{}, fmt.Errorf("mesa no encontrada")
+    }
+
+    if mesa.Estado != "en_curso" {
+        return dto.BlackjackEstadoDTO{}, fmt.Errorf("la mesa ya ha finalizado")
+    }
+
+    indiceMano, err := s.IndiceManoUsuario(mesa, userID)
+    if err != nil {
+        return dto.BlackjackEstadoDTO{}, err
+    }
+
+    if mesa.JugadorActual != indiceMano {
+        return dto.BlackjackEstadoDTO{}, fmt.Errorf("no es tu turno todavía")
+    }
+
+    mano := &mesa.ManosJugadores[indiceMano]
+
+    if mano.Estado != string(models.EnCurso) {
+        return dto.BlackjackEstadoDTO{}, fmt.Errorf("esta mano ya está resuelta")
+    }
+
+    cartas := StringToCartas(mano.Cartas)
+    if len(cartas) != 2 || mano.CartasSplit != "" {
+        return dto.BlackjackEstadoDTO{}, fmt.Errorf("solo puedes rendirte con dos cartas sin haber dividido")
+    }
+
+    mano.Estado = string(models.Rendida)
+    mano.Apuesta /= 2
+
+    s.avanzarManoOMesa(mano, mesa)
+
+    if err := repo.ActualizarMesa(mesa); err != nil {
+        return dto.BlackjackEstadoDTO{}, fmt.Errorf("error actualizando mesa: %w", err)
+    }
+
+    return s.EstadoParaJugador(mesa, userID), nil
+}
+
+func (s *BlackjackService) Split(idMesa uint, userID uint) (dto.BlackjackEstadoDTO, error) {
+    mesa, err := repo.ObtenerMesaConManos(idMesa)
+    if err != nil {
+        return dto.BlackjackEstadoDTO{}, fmt.Errorf("mesa no encontrada")
+    }
+
+    if mesa.Estado != "en_curso" {
+        return dto.BlackjackEstadoDTO{}, fmt.Errorf("la mesa ya ha finalizado")
+    }
+
+    indiceMano, err := s.IndiceManoUsuario(mesa, userID)
+    if err != nil {
+        return dto.BlackjackEstadoDTO{}, err
+    }
+
+    if mesa.JugadorActual != indiceMano {
+        return dto.BlackjackEstadoDTO{}, fmt.Errorf("no es tu turno todavía")
+    }
+
+    mano := &mesa.ManosJugadores[indiceMano]
+
+    if mano.Estado != string(models.EnCurso) {
+        return dto.BlackjackEstadoDTO{}, fmt.Errorf("esta mano ya fue resuelta")
+    }
+
+    if mano.CartasSplit != "" {
+        return dto.BlackjackEstadoDTO{}, fmt.Errorf("ya has hecho split anteriormente")
+    }
+
+    cartas := StringToCartas(mano.Cartas)
+    if len(cartas) != 2 {
+        return dto.BlackjackEstadoDTO{}, fmt.Errorf("necesitas exactamente dos cartas para dividir")
+    }
+
+    if CalcularValor([]string{cartas[0]}) != CalcularValor([]string{cartas[1]}) {
+        return dto.BlackjackEstadoDTO{}, fmt.Errorf("solo puedes dividir cartas del mismo valor")
+    }
+
+    mazo := StringToCartas(mesa.Mazo)
     if len(mazo) < 2 {
-        return nil, fmt.Errorf("no hay suficientes cartas en el mazo para realizar un split")
+        return dto.BlackjackEstadoDTO{}, fmt.Errorf("no hay suficientes cartas en el mazo para split")
     }
 
-
-    // Se reparte una carta a cada nueva mano
     cartaExtra1, mazo := TomarCarta(mazo)
     cartaExtra2, mazo := TomarCarta(mazo)
-
 
     mano1 := []string{cartas[0], cartaExtra1}
     mano2 := []string{cartas[1], cartaExtra2}
 
+    mano.Cartas = CartasToString(mano1)
+    mano.CartasSplit = CartasToString(mano2)
+    mano.ApuestaSplit = mano.Apuesta
+    mano.ManoActual = 1
+    mesa.Mazo = CartasToString(mazo)
 
-    partida.CartasJugador = CartasToString(mano1)
-    partida.CartasJugadorSplit = CartasToString(mano2)
-    partida.Mazo = CartasToString(mazo)
-    partida.ApuestaSplit = partida.Apuesta
-    partida.ManoActual = 1
-
-
-     if strings.ToUpper(strings.TrimSpace(cartas[0])) == "A" {
-        partida.IsSplitAcesMano1 = true
-        partida.IsSplitAcesMano2 = true
-     }
-
-
-    // Evaluación automática: si la mano 1 ya se pasó (bust) con la nueva carta, pasamos a la segunda mano
-    if CalcularValor(mano1) > 21 {
-        partida.ManoActual = 2
+    valor1 := CalcularValor(mano1)
+    if valor1 > 21 {
+        mano.ResultadoMano1 = string(models.Perdida)
     }
 
+    s.avanzarManoOMesa(mano, mesa)
 
-    if err := repo.ActualizarPartida(partida); err != nil {
-        return nil, fmt.Errorf("no se pudo dividir la partida: %w", err)
+    if err := repo.ActualizarMesa(mesa); err != nil {
+        return dto.BlackjackEstadoDTO{}, fmt.Errorf("no se pudo dividir la mano: %w", err)
     }
 
-
-    // Preparamos la respuesta para el cliente, mostrando solo la primera carta de la banca
-    cartasBancaVisible := []string{}
-    valorBancaVisible := 0
-    if len(StringToCartas(partida.CartasBanca)) > 0 {
-        cartasBancaVisible = []string{StringToCartas(partida.CartasBanca)[0], "???"}
-        valorBancaVisible = CalcularValor([]string{StringToCartas(partida.CartasBanca)[0]})
-    }
-
-
-    return gin.H{
-        "mensaje":             "Split realizado. Comenzando con la mano 1.",
-        "mano_actual":         partida.ManoActual,
-        "cartas_mano_1":       mano1,
-        "valor_mano_1":        CalcularValor(mano1),
-        "cartas_mano_2":       mano2,
-        "valor_mano_2":        CalcularValor(mano2),
-        "apuesta_principal":   partida.Apuesta,
-        "apuesta_split":       partida.ApuestaSplit,
-        "estado":              partida.Estado,
-        "cartas_banca":        cartasBancaVisible,
-        "valor_banca_visible": valorBancaVisible,
-    }, nil
+    return s.EstadoParaJugador(mesa, userID), nil
 }
 
-func (s *BlackjackService) Seguro(idPartida uint) (gin.H, error) {
-    partida, err := repo.ObtenerPartidaPorID(idPartida)
+func (s *BlackjackService) Seguro(idMesa uint, userID uint) (dto.BlackjackEstadoDTO, error) {
+    mesa, err := repo.ObtenerMesaConManos(idMesa)
     if err != nil {
-        return nil, fmt.Errorf("partida no encontrada")
-    }
-    if partida.Estado != models.EnCurso {
-        return nil, fmt.Errorf("la partida ya fue finalizada")
+        return dto.BlackjackEstadoDTO{}, fmt.Errorf("mesa no encontrada")
     }
 
-
-    cartasBanca := StringToCartas(partida.CartasBanca)
-
-
-    // El seguro solo se puede tomar si la primera carta visible de la banca es un As.
-    if len(StringToCartas(partida.CartasJugador)) > 2 || partida.CartasJugadorSplit != "" || partida.Doblar || partida.Seguro > 0 {
-        return nil, fmt.Errorf("el seguro solo puede tomarse al inicio de la partida antes de cualquier otra acción.")
+    if mesa.Estado != "en_curso" {
+        return dto.BlackjackEstadoDTO{}, fmt.Errorf("la mesa ya ha finalizado")
     }
+
+    indiceMano, err := s.IndiceManoUsuario(mesa, userID)
+    if err != nil {
+        return dto.BlackjackEstadoDTO{}, err
+    }
+
+    if mesa.JugadorActual != indiceMano {
+        return dto.BlackjackEstadoDTO{}, fmt.Errorf("no es tu turno todavía")
+    }
+
+    mano := &mesa.ManosJugadores[indiceMano]
+
+    if mano.Estado != string(models.EnCurso) {
+        return dto.BlackjackEstadoDTO{}, fmt.Errorf("la mano ya no está en curso")
+    }
+
+    cartas := StringToCartas(mano.Cartas)
+    if len(cartas) != 2 || mano.CartasSplit != "" {
+        return dto.BlackjackEstadoDTO{}, fmt.Errorf("el seguro solo puede tomarse con dos cartas y sin haber hecho split")
+    }
+
+    cartasBanca := StringToCartas(mesa.CartasBanca)
     if len(cartasBanca) == 0 || strings.ToUpper(strings.TrimSpace(cartasBanca[0])) != "A" {
-        mensaje := "No se puede usar seguro: la banca no tiene un As como primera carta. La partida continúa normalmente."
-        return gin.H{
-            "mensaje":          mensaje,
-            "seguro_pagado":    0,
-            "seguro_resultado": 0,
-            "estado":           partida.Estado,
-            "cartas_banca":     []string{cartasBanca[0], "???"},
-        }, nil
+        return dto.BlackjackEstadoDTO{}, fmt.Errorf("no es posible tomar seguro: la banca no muestra un As")
     }
 
+    apuestaSeguro := mano.Apuesta / 2
+    mano.Seguro = apuestaSeguro
 
-    apuestaSeguro := partida.Apuesta / 2
-
-
-    tieneBlackjackLaBanca := TieneBlackjack(cartasBanca)
-
-
-    var mensaje string
-    if tieneBlackjackLaBanca {
-        partida.Seguro = apuestaSeguro * 2
-        partida.Estado = models.Perdida  
-        mensaje = "Seguro activado. La banca tiene Blackjack. Ganás 2:1 en el seguro, pero perdiste la partida principal."
+    if TieneBlackjack(cartasBanca) {
+        mano.Seguro = apuestaSeguro * 2
+        mano.ResultadoMano1 = string(models.Perdida)
+        mano.Estado = CalcularEstadoFinal(mano.ResultadoMano1, "")
+        if err := finalizarMesa(mesa); err != nil {
+            return dto.BlackjackEstadoDTO{}, fmt.Errorf("fallo al finalizar la mesa: %w", err)
+        }
     } else {
-        partida.Seguro = 0
-        mensaje = "Seguro activado. La banca no tiene Blackjack. Perdés el seguro, pero la partida principal continúa."
+        mano.Seguro = 0
     }
 
-
-    if err := repo.ActualizarPartida(partida); err != nil {
-        return nil, fmt.Errorf("no se pudo actualizar la partida con el seguro: %w", err)
+    if err := repo.ActualizarMesa(mesa); err != nil {
+        return dto.BlackjackEstadoDTO{}, fmt.Errorf("no se pudo actualizar la mesa con el seguro: %w", err)
     }
 
-
-    // Si la banca tenía Blackjack (y por ende se activó el seguro), se revelan las cartas de la banca.
-    cartasBancaParaCliente := []string{}
-    valorBancaParaCliente := 0
-    if tieneBlackjackLaBanca {
-        cartasBancaParaCliente = cartasBanca
-        valorBancaParaCliente = CalcularValor(cartasBanca)
-    } else {
-        cartasBancaParaCliente = []string{cartasBanca[0], "???"}
-        valorBancaParaCliente = CalcularValor([]string{cartasBanca[0]})
-    }
-
-
-    return gin.H{
-        "mensaje":             mensaje,
-        "seguro_pagado":       apuestaSeguro,
-        "seguro_resultado":    partida.Seguro,
-        "estado":              partida.Estado,
-        "cartas_banca":        cartasBancaParaCliente,
-        "valor_banca_visible": valorBancaParaCliente,
-    }, nil
+    return s.EstadoParaJugador(mesa, userID), nil
 }
+

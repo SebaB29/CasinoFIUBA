@@ -7,7 +7,7 @@ import (
 )
 
 type BlackjackEnJuego struct {
-	Partidas     map[uint]*models.PartidaBlackjack
+	Mesas     map[uint]*models.MesaBlackjack
 	ConexionesWS map[uint]*websocket.Conn
 	Mutex        sync.Mutex
 }
@@ -15,7 +15,7 @@ type BlackjackEnJuego struct {
 // NuevoBlackjackEnJuego crea la estructura global del juego en memoria
 func NuevoBlackjackEnJuego() *BlackjackEnJuego {
 	return &BlackjackEnJuego{
-		Partidas:     make(map[uint]*models.PartidaBlackjack),
+		Mesas:     make(map[uint]*models.MesaBlackjack),
 		ConexionesWS: make(map[uint]*websocket.Conn),
 	}
 }
