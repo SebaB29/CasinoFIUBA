@@ -41,13 +41,17 @@ func EjecutarPlinko(monto float64, r *rand.Rand) dto.PlinkoResponseDTO {
 		}
 	}
 
-	multiplicador := multiplicadores[pos]
-	ganancia := monto * multiplicador
+	ganancia := calcularGanancia(monto, pos)
 
 	return dto.PlinkoResponseDTO{
 		PosicionFinal: pos,
-		Multiplicador: multiplicador,
+		Multiplicador: multiplicadores[pos],
 		Ganancia:      ganancia,
 		Trayecto:      trayecto,
 	}
+}
+
+func calcularGanancia(monto float64, posicion int) float64 {
+	multiplicador := multiplicadores[posicion]
+	return monto * multiplicador
 }

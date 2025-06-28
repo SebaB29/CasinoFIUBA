@@ -1,9 +1,10 @@
-package juegos
+package websocket
 
 import (
+	juegos "casino/dto/juegos"
 	"casino/services/juegos/blackjack"
-	juegos "casino/dto/juegos" 
 	protocolo "casino/websocket/protocols"
+
 	"github.com/gorilla/websocket"
 )
 

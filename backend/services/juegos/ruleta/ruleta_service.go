@@ -7,10 +7,12 @@ import (
 	"casino/repositories"
 	repositoriesJuegos "casino/repositories/juegos"
 	"time"
+
+	"github.com/gorilla/websocket"
 )
 
 type RuletaService struct {
-	ruletaManager         *RuletaManager
+	ruleta                *RuletaEnJuego
 	usuarioRepository     repositories.UsuarioRepositoryInterface
 	jugadaRepository      repositoriesJuegos.JugadaRuletaRepositoryInterface
 	transaccionRepository repositories.TransaccionRepositoryInterface
@@ -18,44 +20,92 @@ type RuletaService struct {
 
 func NewRuletaService() *RuletaService {
 	return &RuletaService{
-		ruletaManager:         &RuletaManager{},
+		ruleta: &RuletaEnJuego{
+			ConexionesWS: make(map[uint]*websocket.Conn),
+			Estado:       EstadoEsperandoApuestas,
+		},
 		usuarioRepository:     repositories.NewUsuarioRepository(db.DB),
 		jugadaRepository:      repositoriesJuegos.NewJugadaRuletaRepository(db.DB),
 		transaccionRepository: repositories.NewTransaccionRepository(db.DB),
 	}
 }
 
-func (ruletaService *RuletaService) Jugar(usuarioID uint, jugada dto.RuletaRequestDTO) (chan ResultadoRuleta, error) {
+func (ruletaService *RuletaService) Jugar(usuarioID uint, jugada dto.RuletaRequestDTO, conn *websocket.Conn) error {
 	usuario, err := ruletaService.usuarioRepository.ObtenerPorID(usuarioID)
 	if err != nil || usuario == nil {
-		return nil, errores.ErrUsuarioNoEncontrado
+		return errores.ErrUsuarioNoEncontrado
 	}
 
 	// La función se encuentra implementada en logica_negocio.go
 	if err := ruletaService.ValidarApuesta(usuario, jugada); err != nil {
-		return nil, err
+		return err
 	}
 
-	resultadoChannel := make(chan ResultadoRuleta, 1) // Canal con buffer de 1 para evitar bloqueo
-	ruletaService.iniciarTemporizador(usuarioID, jugada, resultadoChannel)
+	ruletaActual := ruletaService.ruleta
 
-	return resultadoChannel, nil
+	ruletaActual.Mutex.Lock()
+
+	if ruletaActual.Estado != EstadoEsperandoApuestas {
+		ruletaActual.Mutex.Unlock()
+		return errores.ErrApuestaFueraDeTiempo
+	}
+
+	// Guardamos la jugada y conexión
+	ruletaActual.ConexionesWS[usuarioID] = conn
+	ruletaActual.Jugadas = append(ruletaActual.Jugadas, JugadaConUsuario{
+		Apuesta:   jugada,
+		UsuarioID: usuarioID,
+	})
+
+	// Si no hay timer activo, lo arrancamos
+	if !ruletaActual.TimerActivo {
+		ruletaActual.TimerActivo = true
+		go func() {
+			time.Sleep(15 * time.Second)
+			ruletaActual.Mutex.Lock()
+			ruletaActual.Estado = EstadoGirando
+			ruletaActual.Mutex.Unlock()
+			ruletaService.anunciarCierreApuestas(ruletaActual)
+			time.Sleep(5 * time.Second)
+			ruletaService.EjecutarRuleta()
+		}()
+	}
+
+	ruletaActual.Mutex.Unlock()
+	return nil
 }
 
 func (ruletaService *RuletaService) EjecutarRuleta() {
-	ruletaActual := &ruletaService.ruletaManager.JuegoActual
+	ruletaActual := ruletaService.ruleta
 
+	numeroGanador := obtenerNumeroGanador()
+	resultados := ruletaService.evaluarJugadas(ruletaActual.Jugadas, numeroGanador)
+	ruletaService.enviarResultados(ruletaActual, resultados, numeroGanador)
+
+	ruletaService.prepararNuevaRonda(ruletaActual)
+}
+
+func (ruletaService *RuletaService) prepararNuevaRonda(ruletaActual *RuletaEnJuego) {
 	ruletaActual.Mutex.Lock()
-	jugadas := ruletaActual.Jugadas
+	defer ruletaActual.Mutex.Unlock()
 
-	// Reinicio las Jugadas y Timer para la proxima ronda
 	ruletaActual.Jugadas = nil
 	ruletaActual.TimerActivo = false
+	ruletaActual.Estado = EstadoEsperandoApuestas
+}
 
-	ruletaActual.Mutex.Unlock()
+func (ruletaService *RuletaService) anunciarCierreApuestas(ruletaActual *RuletaEnJuego) {
+	for _, conexion := range ruletaActual.ConexionesWS {
+		if conexion != nil {
+			conexion.WriteJSON(map[string]string{
+				"message": "¡No va más!",
+			})
+		}
+	}
+}
 
-	// La función se encuentra implementada en logica_juego.go
-	numeroGanador := obtenerNumeroGanador()
+func (ruletaService *RuletaService) evaluarJugadas(jugadas []JugadaConUsuario, numeroGanador NumeroRuleta) map[uint][]dto.ResultadoIndividualDTO {
+	resultados := make(map[uint][]dto.ResultadoIndividualDTO)
 
 	for _, jugada := range jugadas {
 		usuarioID := jugada.UsuarioID
@@ -64,51 +114,44 @@ func (ruletaService *RuletaService) EjecutarRuleta() {
 			continue
 		}
 
-		jugadaDeUsuario := jugada.Apuesta
-
-		// La función se encuentra implementada en logica_juego.go
-		multiplicador := calcularMultiplicador(jugadaDeUsuario, numeroGanador)
+		apuesta := jugada.Apuesta
+		multiplicador := calcularMultiplicador(apuesta, numeroGanador)
 
 		resultado := ResultadoRuleta{
-			MontoApostado: jugadaDeUsuario.Monto,
-			Ganancia:      jugadaDeUsuario.Monto * multiplicador,
+			MontoApostado: apuesta.Monto,
+			Ganancia:      apuesta.Monto * multiplicador,
 			NumeroGanador: numeroGanador,
 		}
 
 		if err := ruletaService.procesarResultado(usuario, resultado); err != nil {
 			continue
 		}
-
-		if err := ruletaService.registrarJugada(usuarioID, jugadaDeUsuario, resultado); err != nil {
+		if err := ruletaService.registrarJugada(usuarioID, apuesta, resultado); err != nil {
 			continue
 		}
 
-		jugada.Resultado <- resultado
-		close(jugada.Resultado)
+		resultados[usuarioID] = append(resultados[usuarioID], dto.ResultadoIndividualDTO{
+			TipoApuesta:   apuesta.TipoApuesta,
+			MontoApostado: apuesta.Monto,
+			Ganancia:      resultado.Ganancia,
+			Detalles:      extraerDetalles(apuesta),
+		})
 	}
+
+	return resultados
 }
 
-func (ruletaService *RuletaService) iniciarTemporizador(usuarioID uint, jugada dto.RuletaRequestDTO, resultadoChannel chan ResultadoRuleta) {
-	ruletaActual := &ruletaService.ruletaManager.JuegoActual
-
-	ruletaActual.Mutex.Lock()
-
-	timerActivo := ruletaActual.TimerActivo
-	if !timerActivo {
-		ruletaActual.TimerActivo = true
-	}
-
-	ruletaActual.Jugadas = append(ruletaActual.Jugadas, JugadaConUsuario{
-		Apuesta:   jugada,
-		UsuarioID: usuarioID,
-		Resultado: resultadoChannel,
-	})
-	ruletaActual.Mutex.Unlock()
-
-	if !timerActivo {
-		go func() {
-			time.Sleep(15 * time.Second)
-			ruletaService.EjecutarRuleta()
-		}()
+func (ruletaService *RuletaService) enviarResultados(ruletaActual *RuletaEnJuego, resultados map[uint][]dto.ResultadoIndividualDTO, numeroGanador NumeroRuleta) {
+	for userID, resumen := range resultados {
+		conexion := ruletaActual.ConexionesWS[userID]
+		if conexion == nil {
+			continue
+		}
+		conexion.WriteJSON(dto.RuletaResultadoUsuarioDTO{
+			Mensaje:       "La ruleta ha girado",
+			NumeroGanador: numeroGanador.Valor,
+			Color:         numeroGanador.Color,
+			Resultados:    resumen,
+		})
 	}
 }

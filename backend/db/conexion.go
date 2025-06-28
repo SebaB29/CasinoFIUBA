@@ -40,9 +40,14 @@ func ConectarDB() {
 	// Se eliminan las tablas para poder testear bien las cosas. LUEGO SACAR
 	db.Migrator().DropTable(&models.Usuario{})
 	db.Migrator().DropTable(&models.Transaccion{})
-	db.Migrator().DropTable(&models.JugadaPlinko{})
 	db.Migrator().DropTable(&models.PartidaBuscaminas{})
+	db.Migrator().DropTable(&models.PartidaVasos{})
+	db.Migrator().DropTable(&models.JugadaPlinko{})
 	db.Migrator().DropTable(&models.JugadaRuleta{})
+	db.Migrator().DropTable(&models.JugadaSlot{})
+
+	db.Migrator().DropTable(&models.MesaBlackjack{})
+	db.Migrator().DropTable(&models.ManoJugadorBlackjack{})
 
 	// Se crean las tablas de la BD
 	// Migrar modelo Usuario (crea tabla si no existe)
@@ -61,24 +66,23 @@ func ConectarDB() {
 
 	if err := DB.AutoMigrate(&models.JugadaPlinko{}); err != nil {
 		log.Fatalf("Error al migrar la base de datos: %v", err)
-	} 
+	}
 	// Migrar modelo PartidaVasos (crea tabla si no existe)
 	if err := DB.AutoMigrate(&models.PartidaVasos{}); err != nil {
 		log.Fatalf("Error al migrar la base de datos: %v", err)
 	}
-	
+
 	// Migrar modelos de Blackjack (mesa + manos) crea tablas si no existen
-    if err := DB.AutoMigrate(&models.MesaBlackjack{}, &models.ManoJugadorBlackjack{}); err != nil {
-	log.Fatalf("Error al migrar modelos de Blackjack: %v", err)
-    }
+	if err := DB.AutoMigrate(&models.MesaBlackjack{}, &models.ManoJugadorBlackjack{}); err != nil {
+		log.Fatalf("Error al migrar modelos de Blackjack: %v", err)
+	}
 
 	// Migrar modelo JugadaRuleta (crea tabla si no existe)
 	if err := DB.AutoMigrate(&models.JugadaRuleta{}); err != nil {
 		log.Fatalf("Error al migrar la base de datos: %v", err)
 	}
 
-	if err := DB.AutoMigrate(&models.JugadaRuleta{}); err != nil {
+	if err := DB.AutoMigrate(&models.JugadaSlot{}); err != nil {
 		log.Fatalf("Error al migrar la base de datos: %v", err)
 	}
 }
-

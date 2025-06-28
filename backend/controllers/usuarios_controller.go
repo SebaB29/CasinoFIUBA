@@ -65,6 +65,18 @@ func (ctrl *UsuarioController) LoginUsuario(c *gin.Context) {
 	})
 }
 
+func (ctrl *UsuarioController) ObtenerSaldo(c *gin.Context) {
+	userID := c.GetUint("userID")
+
+	saldo, err := ctrl.service.ObtenerSaldo(userID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"saldo": saldo})
+}
+
 // GET /usuarios
 func (ctrl *UsuarioController) ObtenerTodosLosUsuarios(c *gin.Context) {
 	usuarios, err := ctrl.service.ObtenerTodos()

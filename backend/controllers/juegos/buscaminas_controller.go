@@ -5,8 +5,8 @@ import (
 	"casino/config"
 	"casino/db"
 	"casino/models"
-	"casino/services/juegos/buscaminas"
 	repositories "casino/repositories/juegos"
+	"casino/services/juegos/buscaminas"
 	"io"
 	"log"
 	"net/http"
@@ -76,7 +76,6 @@ func AbrirCeldaBuscaminas(c *gin.Context) {
 		return
 	}
 
-	userID := c.GetUint("userID")
 	var partidaDB models.PartidaBuscaminas
 	if err := db.DB.First(&partidaDB, req.IDPartida).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Partida no encontrada"})
@@ -108,7 +107,6 @@ func RetirarseBuscaminas(c *gin.Context) {
 		return
 	}
 
-	userID := c.GetUint("userID")
 	var partidaDB models.PartidaBuscaminas
 	if err := db.DB.First(&partidaDB, req.IDPartida).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Partida no encontrada"})
