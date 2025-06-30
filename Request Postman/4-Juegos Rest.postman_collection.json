@@ -1,0 +1,1261 @@
+{
+	"info": {
+		"_postman_id": "6d66b9f0-9252-4d03-820b-c278f12c4ece",
+		"name": "4 - Juegos Rest",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "39234104",
+		"_collection_link": "https://equipo-star.postman.co/workspace/Equipo-Star-Workspace~b5d431ca-ed06-4a0c-980d-83c39d507c76/collection/39234104-6d66b9f0-9252-4d03-820b-c278f12c4ece?action=share&source=collection_link&creator=39234104"
+	},
+	"item": [
+		{
+			"name": "Setup",
+			"item": [
+				{
+					"name": "Registro Jugador",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"postman.setNextRequest(\"Login Jugador\");"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"nombre\": \"Jugador\",\r\n    \"apellido\": \"1\",\r\n    \"fecha_nacimiento\": \"1995-03-12\",\r\n    \"email\": \"jugador@gmail.com\",\r\n    \"password\": \"123\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "localhost:8080/usuarios/registro",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"usuarios",
+								"registro"
+							]
+						},
+						"description": "Debería devolver un Código HTTP:  \n201 (Created)"
+					},
+					"response": []
+				},
+				{
+					"name": "Login Jugador",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"// Extrae el token del response y lo guarda en una variable de global",
+									"const jsonData = pm.response.json();",
+									"pm.globals.set(\"auth_token_jugador_rest\", jsonData.token);",
+									"",
+									"postman.setNextRequest(\"Depósito Jugador\");",
+									""
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"jugador@gmail.com\", \n  \"password\": \"123\"\n}\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "localhost:8080/usuarios/login",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"usuarios",
+								"login"
+							]
+						},
+						"description": "Debería devolver un Código HTTP:  \n200 (Ok)\n\nY un Response:  \n{\n\n\"id\",\n\n\"nombre\",\n\n\"email\",\n\n\"mensaje\": \"Inicio de sesión exitoso\"\n\n}"
+					},
+					"response": []
+				},
+				{
+					"name": "Depósito Jugador",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"postman.setNextRequest(null);"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{auth_token_jugador_rest}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"tipo\": \"deposito\",\n    \"monto\": 1000.0\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "localhost:8080/transacciones/depositar",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"transacciones",
+								"depositar"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Consultar saldo",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{auth_token_jugador_rest}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "localhost:8080/usuarios/saldo",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"usuarios",
+								"saldo"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "4.1 Buscaminas",
+			"item": [
+				{
+					"name": "4.1.1 Crear partida - Ok",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"postman.setNextRequest(\"4.1.2 Crear partida - Cero minas\");",
+									""
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{auth_token_jugador_rest}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"minas\": 5,\n    \"apuesta\": 50.0\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "localhost:8080/buscaminas/nueva",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"buscaminas",
+								"nueva"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "4.1.2 Crear partida - Cero minas",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"postman.setNextRequest(\"4.1.3 Crear partida - Apuesta insuficiente\");",
+									""
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{auth_token_jugador_rest}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"minas\": 0,\n    \"apuesta\": 50.0\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "localhost:8080/buscaminas/nueva",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"buscaminas",
+								"nueva"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "4.1.3 Crear partida - Apuesta insuficiente",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"postman.setNextRequest(\"4.1.4 Abrir celda - Ok\");",
+									""
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{auth_token_jugador_rest}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"minas\": 5,\n    \"apuesta\": 0\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "localhost:8080/buscaminas/nueva",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"buscaminas",
+								"nueva"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "4.1.4 Abrir celda - Ok",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{auth_token_jugador_rest}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"id_partida\": 1, // Colocar el id de la partida creada en \"4.1.1 Crear partida - Ok\"\n    \"X\": 1,\n    \"Y\": 3\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "localhost:8080/buscaminas/abrir",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"buscaminas",
+								"abrir"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "4.1.5 Abrir celda - Datos inválidos",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"postman.setNextRequest(\"4.1.6 Retirarse - Ok\");",
+									""
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{auth_token_jugador_rest}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"id_partida\": 1, // Colocar el id de la partida creada en \"4.1.1 Crear partida - Ok\"\n    \"fila\": 100,\n    \"col\": 1\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "localhost:8080/buscaminas/abrir",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"buscaminas",
+								"abrir"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "4.1.6 Retirarse - Ok",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"postman.setNextRequest(\"4.1.7 Ver Minas (Debug)\");",
+									""
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{auth_token_jugador_rest}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"id_partida\": 1 // Colocar el id de la partida creada en \"4.1.1 Crear partida - Ok\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "localhost:8080/buscaminas/retirarse",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"buscaminas",
+								"retirarse"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "4.2 Plinko",
+			"item": [
+				{
+					"name": "4.2.1 Jugada - Ok",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"postman.setNextRequest(\"4.2.2 Jugada - Apuesta insuficiente\");",
+									""
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{auth_token_jugador_rest}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"monto\": 5.0\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "localhost:8080/juegos/plinko",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"juegos",
+								"plinko"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "4.2.2 Jugada - Apuesta insuficiente",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"postman.setNextRequest(\"4.2.3 Jugada - Saldo insuficiente\");",
+									""
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{auth_token_jugador_rest}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"monto\": 0.5\n}"
+						},
+						"url": {
+							"raw": "localhost:8080/juegos/plinko",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"juegos",
+								"plinko"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "4.2.3 Jugada - Saldo insuficiente",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"postman.setNextRequest(\"4.2.4 Jugada - Datos inválidos\");",
+									""
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{auth_token_jugador_rest}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"monto\": 99999999999999999\n}"
+						},
+						"url": {
+							"raw": "localhost:8080/juegos/plinko",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"juegos",
+								"plinko"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "4.2.4 Jugada - Datos inválidos",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"postman.setNextRequest(null);",
+									""
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{auth_token_jugador_rest}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"monto\": null\n}"
+						},
+						"url": {
+							"raw": "localhost:8080/juegos/plinko",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"juegos",
+								"plinko"
+							]
+						}
+					},
+					"response": []
+				}
+			],
+			"description": "Explicación:  \n[https://wundertraining.com/wp-content/uploads/2024/07/plinko-juega/](https://wundertraining.com/wp-content/uploads/2024/07/plinko-juega/)"
+		},
+		{
+			"name": "4.3 Slot",
+			"item": [
+				{
+					"name": "4.3.1 Jugada - Ok",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"postman.setNextRequest(\"4.3.2 Jugada - Apuesta insuficiente\");",
+									""
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{auth_token_jugador_rest}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"monto\": 20.0\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "localhost:8080/juegos/slot",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"juegos",
+								"slot"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "4.3.2 Jugada - Apuesta insuficiente",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"postman.setNextRequest(\"4.3.3 Jugada - Saldo insuficiente\");",
+									""
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{auth_token_jugador_rest}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"monto\": 0.5\n}"
+						},
+						"url": {
+							"raw": "localhost:8080/juegos/slot",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"juegos",
+								"slot"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "4.3.3 Jugada - Saldo insuficiente",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"postman.setNextRequest(\"4.3.4 Jugada - Datos inválidos\");",
+									""
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{auth_token_jugador_rest}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"monto\": 99999999999999999\n}"
+						},
+						"url": {
+							"raw": "localhost:8080/juegos/slot",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"juegos",
+								"slot"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "4.3.4 Jugada - Datos inválidos",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"postman.setNextRequest(null);",
+									""
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{auth_token_jugador_rest}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"monto\": null\n}"
+						},
+						"url": {
+							"raw": "localhost:8080/juegos/slot",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"juegos",
+								"slot"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "4.4 Vasos",
+			"item": [
+				{
+					"name": "4.4.1 Crear partida - Ok",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"postman.setNextRequest(\"4.4.2 Jugada - Ok\");",
+									""
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{auth_token_jugador_rest}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"apuesta\": 20.0\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "localhost:8080/vasos/nueva",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"vasos",
+								"nueva"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "4.4.2 Jugada - Ok",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"postman.setNextRequest(\"4.4.2 Jugada - Apuesta insuficiente\");",
+									""
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{auth_token_jugador_rest}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"id_partida\": 1, // Colocar el id de la partida creada en \"4.4.1 Crear partida - Ok\"\n  \"eleccion\": 0\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "localhost:8080/vasos/jugar",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"vasos",
+								"jugar"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "4.4.3 Ver resultado - Ok",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"postman.setNextRequest(null);",
+									""
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{auth_token_jugador_rest}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"id_partida\": 2, // Colocar el id de la partida creada en \"4.4.1 Crear partida - Ok\"\n  \"eleccion\": 0\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "localhost:8080/vasos/{{id_partida_vasos}}",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"vasos",
+								"{{id_partida_vasos}}"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "4.5 Blackjack",
+			"item": [
+				{
+					"name": "4.5.1 Crear partida -Ok",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoxLCJyb2wiOiJ1c2VyIiwiZXhwIjoxNzUxMzI4MTMyLCJpYXQiOjE3NTEyNDE3MzJ9.FoTeXHBV17QcUzqfFIvIC03s2uh0QpnfdgJ8uB4Rzjg",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"apuesta\": 150\r\n}\r\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:8080/blackjack/mesa/nueva",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"blackjack",
+								"mesa",
+								"nueva"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "4.5.2 Unirse a partida - Ok",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoyLCJyb2wiOiJ1c2VyIiwiZXhwIjoxNzUxMDg2ODk5LCJpYXQiOjE3NTEwMDA0OTl9.X5qtlsnLOODIb4QVqX0TR-DeR3TN_v8dbvMsSghhpdM",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"id_mesa\": 1, // Colocar el id de la partida creada en \"4.5.1 Crear partida - Ok\"\r\n  \"apuesta\": 200\r\n}\r\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:8080/blackjack/mesa/unirse",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"blackjack",
+								"mesa",
+								"unirse"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "4.5.3 Estado mesa - Ok",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoxLCJyb2wiOiJ1c2VyIiwiZXhwIjoxNzUxMDgzMTA4LCJpYXQiOjE3NTA5OTY3MDh9.j_23NLdxUEwXQtaj4NTr8qpSXkv12LYVroHRp4t1AK0",
+								"type": "text"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoyLCJyb2wiOiJ1c2VyIiwiZXhwIjoxNzUxMDgzMTE2LCJpYXQiOjE3NTA5OTY3MTZ9.oD5Eq8tK43O-nKdNal8GBkyTiWj3qfpQ_ct4bpI1c98",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": ""
+						},
+						"url": {
+							"raw": "http://localhost:8080/blackjack/mesa/estado/1",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"blackjack",
+								"mesa",
+								"estado",
+								"1"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"packages": {},
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"packages": {},
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "mail_jugador",
+			"value": "jugador@gmail.com",
+			"type": "string"
+		},
+		{
+			"key": "pass_jugador",
+			"value": "pass123",
+			"type": "string"
+		},
+		{
+			"key": "auth_token_jugador",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "VASOS ##############################################",
+			"value": "##############################################",
+			"type": "string"
+		},
+		{
+			"key": "url_vasos_crear_partida",
+			"value": "localhost:8080/vasos/nueva",
+			"type": "string"
+		},
+		{
+			"key": "url_vasos_jugar",
+			"value": "localhost:8080/vasos/jugar",
+			"type": "string"
+		},
+		{
+			"key": "url_vasos_resultado",
+			"value": "localhost:8080/vasos/",
+			"type": "string"
+		},
+		{
+			"key": "id_partida_vasos",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "BUSCAMINAS ##############################################",
+			"value": "##############################################",
+			"type": "string"
+		},
+		{
+			"key": "url_buscaminas_crear_partida",
+			"value": "localhost:8080/buscaminas/nueva",
+			"type": "string"
+		},
+		{
+			"key": "url_buscaminas_abrir_celda",
+			"value": "localhost:8080/buscaminas/abrir",
+			"type": "string"
+		},
+		{
+			"key": "url_buscaminas_retirarse",
+			"value": "localhost:8080/buscaminas/retirarse",
+			"type": "string"
+		},
+		{
+			"key": "url_buscaminas_debug",
+			"value": "http://localhost:8080/buscaminas/debug",
+			"type": "string"
+		},
+		{
+			"key": "id_partida_buscaminas",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "PLINKO ##############################################",
+			"value": "###############################################",
+			"type": "string"
+		},
+		{
+			"key": "url_plinko",
+			"value": "localhost:8080/juegos/plinko",
+			"type": "string"
+		},
+		{
+			"key": "SLOT ##############################################",
+			"value": "###############################################",
+			"type": "string"
+		},
+		{
+			"key": "url_slot",
+			"value": "localhost:8080/juegos/slot",
+			"type": "string"
+		}
+	]
+}
