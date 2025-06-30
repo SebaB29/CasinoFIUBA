@@ -1,0 +1,45 @@
+{
+	"id": "c7644b47-bdeb-49cd-8f07-6bb1999297ca",
+	"values": [
+		{
+			"key": "auth_token_usuario_prueba_transacciones",
+			"value": "",
+			"type": "default",
+			"enabled": true
+		},
+		{
+			"key": "auth_token_usuario_normal",
+			"value": "",
+			"type": "default",
+			"enabled": true
+		},
+		{
+			"key": "auth_token_admin",
+			"value": "",
+			"type": "default",
+			"enabled": true
+		},
+		{
+			"key": "auth_token_jugador_rest",
+			"value": "",
+			"type": "default",
+			"enabled": true
+		},
+		{
+			"key": "auth_token_jugador_1",
+			"value": "",
+			"type": "default",
+			"enabled": true
+		},
+		{
+			"key": "auth_token_jugador_2",
+			"value": "",
+			"type": "default",
+			"enabled": true
+		}
+	],
+	"name": "Globals",
+	"_postman_variable_scope": "globals",
+	"_postman_exported_at": "2025-06-30T03:56:59.683Z",
+	"_postman_exported_using": "Postman/11.52.0-250629-2334"
+}

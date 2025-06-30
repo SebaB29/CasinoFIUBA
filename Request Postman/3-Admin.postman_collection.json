@@ -1,0 +1,429 @@
+{
+	"info": {
+		"_postman_id": "40acd907-5cc3-4501-b52b-b0cf56f3ff08",
+		"name": "3 - Admin",
+		"description": "Es necesario insertar el usuario admin en la BD antes de probar estos request",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "39234104",
+		"_collection_link": "https://equipo-star.postman.co/workspace/Equipo-Star-Workspace~b5d431ca-ed06-4a0c-980d-83c39d507c76/collection/39234104-40acd907-5cc3-4501-b52b-b0cf56f3ff08?action=share&source=collection_link&creator=39234104"
+	},
+	"item": [
+		{
+			"name": "Setup",
+			"item": [
+				{
+					"name": "Usuario Normal",
+					"item": [
+						{
+							"name": "Registro - Usuario normal",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {}
+									}
+								},
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											"postman.setNextRequest(\"Login - Usuario normal\");"
+										],
+										"type": "text/javascript",
+										"packages": {}
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n    \"nombre\": \"Usuario\",\r\n    \"apellido\": \"Normal\",\r\n    \"fecha_nacimiento\": \"1995-03-12\",\r\n    \"email\": \"usuario_normal@gmail.com\",\r\n    \"password\": \"123\"\r\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "localhost:8080/usuarios/registro",
+									"host": [
+										"localhost"
+									],
+									"port": "8080",
+									"path": [
+										"usuarios",
+										"registro"
+									]
+								},
+								"description": "Debería devolver un Código HTTP:  \n201 (Created)"
+							},
+							"response": []
+						},
+						{
+							"name": "Login - Usuario normal",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"// Extrae el token del response y lo guarda en una variable de global",
+											"const jsonData = pm.response.json();",
+											"pm.globals.set(\"auth_token_usuario_normal\", jsonData.token);",
+											"",
+											"postman.setNextRequest(\"Login - Admin\");"
+										],
+										"type": "text/javascript",
+										"packages": {}
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"email\": \"usuario_normal@gmail.com\", \n  \"password\": \"123\"\n}\n",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "localhost:8080/usuarios/login",
+									"host": [
+										"localhost"
+									],
+									"port": "8080",
+									"path": [
+										"usuarios",
+										"login"
+									]
+								},
+								"description": "Debería devolver un Código HTTP:  \n200 (Ok)\n\nY un Response:  \n{\n\n\"id\",\n\n\"nombre\",\n\n\"email\",\n\n\"mensaje\": \"Inicio de sesión exitoso\"\n\n}"
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "Login - Admin",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"// Extrae el token del response y lo guarda en una variable de global",
+									"const jsonData = pm.response.json();",
+									"pm.globals.set(\"auth_token_admin\", jsonData.token);",
+									"",
+									"postman.setNextRequest(\"3.1.1 Obtener usuario por id - Ok\");"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"admin@casino.com\", \n  \"password\": \"admin123\"\n}\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "localhost:8080/usuarios/login",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"usuarios",
+								"login"
+							]
+						},
+						"description": "Debería devolver un Código HTTP:  \n200 (Ok)\n\nY un Response:  \n{\n\n\"id\",\n\n\"nombre\",\n\n\"email\",\n\n\"mensaje\": \"Inicio de sesión exitoso\"\n\n}"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "3.1 Acceder Info Usuarios",
+			"item": [
+				{
+					"name": "3.1.1 Obtener usuario por id - Ok",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"postman.setNextRequest(\"3.1.2 Obtener usuario por id - No admin\");"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{auth_token_admin}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "",
+							"options": {
+								"raw": {
+									"language": "text"
+								}
+							}
+						},
+						"url": {
+							"raw": "localhost:8080/usuarios/{usuario_id}",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"usuarios",
+								"{usuario_id}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "3.1.2 Obtener usuario por id - No admin",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"postman.setNextRequest(\"3.1.3 Obtener usuarios - Ok\");"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{auth_token_usuario_normal}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "",
+							"options": {
+								"raw": {
+									"language": "text"
+								}
+							}
+						},
+						"url": {
+							"raw": "localhost:8080/usuarios/{usuario_id}",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"usuarios",
+								"{usuario_id}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "3.1.3 Obtener usuarios - Ok",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"postman.setNextRequest(\"3.1.4 Obtener usuarios - No admin\");"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{auth_token_admin}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "",
+							"options": {
+								"raw": {
+									"language": "text"
+								}
+							}
+						},
+						"url": {
+							"raw": "localhost:8080/usuarios/",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"usuarios",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "3.1.4 Obtener usuarios - No admin",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"postman.setNextRequest(null);"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{auth_token_usuario_normal}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "",
+							"options": {
+								"raw": {
+									"language": "text"
+								}
+							}
+						},
+						"url": {
+							"raw": "localhost:8080/usuarios/",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"usuarios",
+								""
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"packages": {},
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"packages": {},
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "mail_admin",
+			"value": "admin@casino.com",
+			"type": "string"
+		},
+		{
+			"key": "mail_usuario_normal",
+			"value": "usuario_normal@gmail.com",
+			"type": "string"
+		},
+		{
+			"key": "pass_usuarios",
+			"value": "admin123",
+			"type": "string"
+		},
+		{
+			"key": "auth_token_admin",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "auth_token_usuario_normal",
+			"value": "",
+			"type": "string"
+		}
+	]
+}

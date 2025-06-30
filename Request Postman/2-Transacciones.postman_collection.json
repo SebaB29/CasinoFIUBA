@@ -1,0 +1,410 @@
+{
+	"info": {
+		"_postman_id": "e7c6e3e0-7f43-4326-a75f-796cb53302c8",
+		"name": "2 - Transacciones",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "39234104",
+		"_collection_link": "https://equipo-star.postman.co/workspace/Equipo-Star-Workspace~b5d431ca-ed06-4a0c-980d-83c39d507c76/collection/39234104-e7c6e3e0-7f43-4326-a75f-796cb53302c8?action=share&source=collection_link&creator=39234104"
+	},
+	"item": [
+		{
+			"name": "Setup",
+			"item": [
+				{
+					"name": "Registro Usuario",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"postman.setNextRequest(\"Login Usuario\");"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						},
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"pm.variables.set(\"usuario_prueba\", \"usuario_prueba\" + Math.floor(Math.random() * 100000) + \"@gmail.com\");"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"nombre\": \"Usuario\",\r\n    \"apellido\": \"Transacciones\",\r\n    \"fecha_nacimiento\": \"1995-03-12\",\r\n    \"email\": \"usuario_prueba_transaccion@gmail.com\",\r\n    \"password\": \"123\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "localhost:8080/usuarios/registro",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"usuarios",
+								"registro"
+							]
+						},
+						"description": "Debería devolver un Código HTTP:  \n201 (Created)"
+					},
+					"response": []
+				},
+				{
+					"name": "Login Usuario",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"// Extrae el token del response y lo guarda en una variable de global",
+									"const jsonData = pm.response.json();",
+									"pm.globals.set(\"auth_token_usuario_prueba_transacciones\", jsonData.token);",
+									"",
+									"postman.setNextRequest(\"2.1.1 Depósito - Ok\");"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						},
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									""
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"usuario_prueba_transaccion@gmail.com\", \n  \"password\": \"123\"\n}\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "localhost:8080/usuarios/login",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"usuarios",
+								"login"
+							]
+						},
+						"description": "Debería devolver un Código HTTP:  \n200 (Ok)\n\nY un Response:  \n{\n\n\"id\",\n\n\"nombre\",\n\n\"email\",\n\n\"mensaje\": \"Inicio de sesión exitoso\"\n\n}"
+					},
+					"response": []
+				},
+				{
+					"name": "Consultar saldo",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{auth_token_usuario_prueba_transacciones}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "localhost:8080/usuarios/saldo",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"usuarios",
+								"saldo"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "2.1 Depósito",
+			"item": [
+				{
+					"name": "2.1.1 Depósito - Ok",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"postman.setNextRequest(\"2.1.2 Depósito - Monto negativo\");"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{auth_token_usuario_prueba_transacciones}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"tipo\": \"deposito\",\n    \"monto\": 1000.0\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "localhost:8080/transacciones/depositar",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"transacciones",
+								"depositar"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "2.1.2 Depósito - Monto negativo",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									""
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{auth_token_usuario_prueba_transacciones}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"tipo\": \"deposito\",\n  \"monto\": -100.0\n}\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "localhost:8080/transacciones/depositar",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"transacciones",
+								"depositar"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "2.2 Extracción",
+			"item": [
+				{
+					"name": "2.2.1 Extracción - Ok",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"postman.setNextRequest(\"2.2.2 Extracción - Saldo insuficiente\");"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{auth_token_usuario_prueba_transacciones}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"tipo\": \"extraccion\",\n    \"monto\": 500.0\n}\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "localhost:8080/transacciones/extraer",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"transacciones",
+								"extraer"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "2.2.2 Extracción - Saldo insuficiente",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									""
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"postman.setNextRequest(null);"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{auth_token_usuario_prueba_transacciones}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"tipo\": \"extraccion\",\n  \"monto\": 99999999999999999.0\n}\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "localhost:8080/transacciones/extraer",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"transacciones",
+								"extraer"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"packages": {},
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"packages": {},
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "usuario_prueba",
+			"value": "usuario_prueba{{randomNumber}}@gmail.com",
+			"type": "string"
+		},
+		{
+			"key": "pass_usuario",
+			"value": "pass123",
+			"type": "string"
+		},
+		{
+			"key": "auth_token_usuario",
+			"value": "",
+			"type": "string"
+		}
+	]
+}
