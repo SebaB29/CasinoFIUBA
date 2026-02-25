@@ -4,9 +4,6 @@ A robust university project simulating a casino betting platform. This system fe
 
 ---
 
-# 📸 Overview
-
-
 # 📍 Table of Contents
 - [📝 Description](#-description)
   - [🧩 Key Features](#-key-features)
