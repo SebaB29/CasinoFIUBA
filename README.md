@@ -1,80 +1,98 @@
 # 🎰 CasinoFIUBA
 
-Proyecto universitario que simula un sitio de apuestas tipo casino. Incluye juegos como ruleta, plinko, buscaminas, entre otros. 
-
-Backend en **Go**, base de datos **PostgreSQL**, todo orquestado con **Docker Compose**.
+A robust university project simulating a casino betting platform. This system features a variety of games like Roulette, Plinko, and Minesweeper, all powered by a high-performance backend. It showcases modern development practices including containerization and relational database management.
 
 ---
 
-## 📑 Índice
+# 📸 Overview
 
-- [🚀 Requisitos](#-requisitos)
-- [⚙️ Instalación y ejecución](#️-instalación-y-ejecución)
-- [📁 Estructura del proyecto](#-estructura-del-proyecto)
-- [🧼 Apagar el entorno](#-apagar-el-entorno)
-- [🌐 URLs importantes](#-urls-importantes)
-- [👥 Participantes](#-participantes)
 
----
-
-## 🚀 Requisitos
-
-Asegurate de tener instalado:
-
-- [Docker](https://www.docker.com/)
-- [Docker Compose](https://docs.docker.com/compose/)
+# 📍 Table of Contents
+- [📝 Description](#-description)
+  - [🧩 Key Features](#-key-features)
+  - [🏗️ System Architecture](#️-system-architecture)
+  - [🛠️ Technologies](#️-technologies)
+- [🚀 Getting Started](#-getting-started)
+  - [📋 Prerequisites](#-prerequisites)
+  - [⚙️ Setup & Execution](#️-setup--execution)
+- [🌐 Important URLs](#-important-urls)
+- [🤝 Contributing](#-contributing)
+- [👥 Team](#-team)
+- [📄 License](#-license)
 
 ---
 
-## ⚙️ Instalación y ejecución
+# 📝 Description
+**CasinoFIUBA** is a backend-focused application designed to handle betting logic, user balances, and game results securely and efficiently. By using **Go**, the project ensures high concurrency, while **PostgreSQL** provides data integrity for financial transactions (bets and wins).
 
-### 1. Clonar el repositorio
+## 🧩 Key Features
+- **Game Variety:** Implementation of classic casino games (Roulette, Plinko, Mines).
+- **Relational Storage:** Persistent management of users and game history.
+- **Environment Isolation:** Fully dockerized setup for easy deployment and consistent development environments.
+- **Backend API:** Built with Go for optimal performance and type safety.
 
-```bash
-git clone git@github.com:SebaB29/CasinoFIUBA.git
-cd CasinoFIUBA
-```
-
-### 2. Crear el archivo `.env`
-
-```bash
-cp .env.example .env
-```
-`⚠️ Este archivo contiene variables de entorno necesarias para la base de datos y el backend.`
-
-### 3. Ejecutar el entorno
-
-```bash
-sh start.sh
-```
-
-Este script compila y levanta:
-* PostgreSQL
-* Backend en Go
-
-## 📁 Estructura del proyecto
-```
+## 🏗️ System Architecture
+```text
 .
-├── backend/          # Backend en Go
-├── test/             # Pruebas automáticas o manuales
-├── .env.example      # Variables de entorno de ejemplo
-├── .gitignore
-├── docker-compose.yml
-├── start.sh          # Script para levantar el entorno
-└── README.md
+├── backend/          # Go source code (API, Logic, DB connection)
+├── test/             # Automated and manual test suites
+├── .env.example      # Example environment variables
+├── docker-compose.yml # Docker orchestration
+└── start.sh          # Automation script for environment setup
 ```
 
-## 🧼 Apagar el entorno
-Para detener los servicios, simplemente presioná `Ctrl+C` en la terminal donde ejecutaste el script.
+## 🛠️ Technologies
+* **Language**: Go (Golang)
+* **Database**: PostgreSQL
+* **DevOps**: Docker & Docker Compose
+* **Scripting**: Shell Script (sh)
 
-## 🌐 URLs importantes
-| Servicio   | URL                                            |
-| ---------- | ---------------------------------------------- |
-| Backend    | [http://localhost:8080](http://localhost:8080) |
-| PostgreSQL | `localhost:5432` (accesible internamente)      |
+# 🚀 Getting Started
+## 📋 Prerequisites
+Ensure you have the following installed:
+* Docker
+* Docker Compose
 
-## 👥 Participantes
+## ⚙️ Setup & Execution
+1. Clone the repository:
+   ```bash
+   git clone git@github.com:SebaB29/CasinoFIUBA.git
+   cd CasinoFIUBA
+   ```
+
+2. Configure environment variables:
+   ```bash
+   cp .env.example .env
+   ```
+   ⚠️ Note: Open .env and fill in the required database credentials.
+
+3. Launch the environment:
+   ```bash
+   sh start.sh
+   ```
+   This script will build the Go binary and spin up the PostgreSQL container.
+
+4. Shutdown:
+   To stop the services, simply press `Ctrl+C` or run `docker-compose down`.
+
+# 🌐 Important URLs
+| Service     | URL                              |
+| ----------- | -------------------------------- |
+| Backend API | http://localhost:8080            |
+| PostgreSQL  | localhost:5432 (Internal access) |
+
+# 🤝 Contributing
+1. Fork the project.
+2. Create your Feature Branch (git checkout -b feature/AmazingFeature).
+3. Commit your changes (git commit -m 'Add some AmazingFeature').
+4. Push to the Branch (git push origin feature/AmazingFeature).
+5. Open a Pull Request.
+
+# 👥 Team
 | Nombre             | GitHub                                             |
 | ------------------ | -------------------------------------------------- |
 | Sebastián Brizuela | [@SebaB29](https://github.com/SebaB29)             |
 | Mauri Laganga      | [@Mauri-laganga](https://github.com/Mauri-laganga) |
+
+# 📄 License
+This project is licensed under the MIT License - see the LICENSE file for details.
