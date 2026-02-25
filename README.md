@@ -2,8 +2,6 @@
 
 A robust university project simulating a casino betting platform. This system features a variety of games like Roulette, Plinko, and Minesweeper, all powered by a high-performance backend. It showcases modern development practices including containerization and relational database management.
 
----
-
 # 📍 Table of Contents
 - [📝 Description](#-description)
   - [🧩 Key Features](#-key-features)
