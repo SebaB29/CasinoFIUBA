@@ -1,4 +1,4 @@
-# 🎰 CasinoFIUBA
+# 🎰 Casino FIUBA
 
 A robust university project simulating a casino betting platform. This system features a variety of games like Roulette, Plinko, and Minesweeper, all powered by a high-performance backend. It showcases modern development practices including containerization and relational database management.
 
@@ -51,8 +51,8 @@ Ensure you have the following installed:
 ## ⚙️ Setup & Execution
 1. Clone the repository:
    ```bash
-   git clone git@github.com:SebaB29/CasinoFIUBA.git
-   cd CasinoFIUBA
+   git clone git@github.com:SebaB29/casino-FIUBA.git
+   cd casino-FIUBA
    ```
 
 2. Configure environment variables:
